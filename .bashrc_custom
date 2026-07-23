@@ -8,6 +8,6 @@
 # ----------------------------------------------------------
 
 alias ls='lsd --group-directories-first'
-alias la='lsd -a -1 --group-directories-first'
+alias la='lsd -a --group-directories-first'
 alias ll='lsd -l --group-directories-first'
 alias lt='lsd -a --tree --depth 3 --group-directories-first'
