@@ -2,7 +2,8 @@
 
 > A portable Linux configuration that allows me to quickly recreate my preferred shell environment on any system.
 
-This repository contains my personal shell configuration, tools and workflow for Linux systems.
+This repository contains my personal shell configuration, tools and workflows for Linux systems.
+It is designed to evolve as I learn, experiment and refine my Linux workflow.
 
 The goal is simple:
 
@@ -14,17 +15,41 @@ I want to rebuild my preferred working environment in just a few minutes.
 - Custom shell configuration
 - `lsd` aliases
 - Git version control
-- Designed to grow over time
+- Safe installation with automatic backups
 
 ## Installation
 
-Installation instructions will be added as soon as the first installation script is available.
+Clone the repository:
+
+```bash
+git clone https://github.com/maldor0r/dotfiles
+```
+
+Run the installer:
+
+```bash
+~/dotfiles/install.sh
+```
+
+Or:
+
+```bash
+cd dotfiles
+./install.sh
+```
+
+The installer will:
+
+- Create a backup of your existing `.bashrc`
+- Create a new `.bashrc` if none exists
+- Add the custom dotfiles configuration
+- Avoid adding duplicate configuration blocks
 
 ## Roadmap
 
 - [x] Custom Bash configuration
 - [x] Initial `lsd` aliases
-- [ ] Installation script
+- [x] Installation script
 - [ ] Git configuration
 - [ ] Bash functions
 - [ ] Additional shell improvements
