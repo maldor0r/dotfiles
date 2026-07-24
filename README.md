@@ -19,7 +19,7 @@ I want to rebuild my preferred working environment in just a few minutes.
 
 ## Aliases
 
-The following `lsd` aliases are available after installation:
+When `lsd` is installed, the following aliases are available after installation:
 
 | Alias | Command | Description |
 |-------|---------|-------------|
@@ -32,6 +32,8 @@ The following `lsd` aliases are available after installation:
 | `llt` | `lsd -l --tree --depth 3 --group-directories-first` | Tree + long, no hidden files |
 | `llta` | `lsd -la --tree --depth 3 --group-directories-first` | Tree + long, with hidden files |
 
+If `lsd` is not installed, basic fallback aliases are used for `ls`, `la`, `ll`, and `lla`.
+
 ## Installation
 
 Clone the repository:
@@ -40,25 +42,23 @@ Clone the repository:
 git clone https://github.com/maldor0r/dotfiles
 ```
 
-Run the installer:
-
-```bash
-~/dotfiles/install.sh
-```
-
-Or:
+Run the installer from the cloned folder:
 
 ```bash
 cd dotfiles
 ./install.sh
 ```
 
+The repository does not have to be cloned directly into your home directory; the installer uses its own location.
+
 The installer will:
 
 - Create a backup of your existing `.bashrc`
 - Create a new `.bashrc` if none exists
 - Add the custom dotfiles configuration
+- Point `.bashrc` to this cloned repository's `.bashrc_custom`
 - Avoid adding duplicate configuration blocks
+- Warn if `lsd` is not installed and offer to install
 
 ## Roadmap
 

@@ -5,14 +5,22 @@
 # ==========================================================
 
 # ----------------------------------------------------------
-# lsd aliases
+# lsd aliases (with fallback if lsd is not installed)
 # ----------------------------------------------------------
 
-alias ls='lsd --group-directories-first'          # basic, no hidden
-alias la='lsd -a --group-directories-first'        # basic, with hidden
-alias ll='lsd -l --group-directories-first'        # long, no hidden
-alias lla='lsd -la --group-directories-first'      # long, with hidden
-alias lt='lsd --tree --depth 3 --group-directories-first'   # tree, no hidden
-alias lta='lsd -a --tree --depth 3 --group-directories-first' # tree, with hidden
-alias llt='lsd -l --tree --depth 3 --group-directories-first' # tree + long, no hidden
-alias llta='lsd -la --tree --depth 3 --group-directories-first' # tree + long, with hidden
+if command -v lsd &> /dev/null; then
+    alias ls='lsd --group-directories-first'          # basic, no hidden
+    alias la='lsd -a --group-directories-first'        # basic, with hidden
+    alias ll='lsd -l --group-directories-first'        # long, no hidden
+    alias lla='lsd -la --group-directories-first'      # long, with hidden
+    alias lt='lsd --tree --depth 3 --group-directories-first'   # tree, no hidden
+    alias lta='lsd -a --tree --depth 3 --group-directories-first' # tree, with hidden
+    alias llt='lsd -l --tree --depth 3 --group-directories-first' # tree + long, no hidden
+    alias llta='lsd -la --tree --depth 3 --group-directories-first' # tree + long, with hidden
+else
+    # Fallback aliases using standard ls
+    alias ls='ls --color=auto'
+    alias la='ls -A --color=auto'
+    alias ll='ls -l --color=auto'
+    alias lla='ls -lA --color=auto'
+fi

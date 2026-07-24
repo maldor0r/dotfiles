@@ -7,6 +7,42 @@ echo
 
 echo "[INFO] Setting up your dotfiles..."
 
+DOTFILES_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+BASHRC_CUSTOM="$DOTFILES_DIR/.bashrc_custom"
+BASHRC_CUSTOM_ESCAPED=$(printf '%q' "$BASHRC_CUSTOM")
+
+# ----------------------------------------------------------
+# Check prerequisites
+# ----------------------------------------------------------
+
+if ! command -v lsd &> /dev/null; then
+    echo "[WARN] 'lsd' is not installed."
+    echo "       The custom aliases require lsd for the full experience."
+    echo "       Without it, basic ls fallbacks will be used."
+    echo ""
+    echo "       Install lsd manually from:"
+    echo "         https://github.com/lsd-rs/lsd/releases"
+    echo ""
+    echo "       Or on Debian/Ubuntu:"
+    echo "         sudo apt install lsd"
+    echo ""
+    read -rp "       Install lsd now? (y/N): " INSTALL_LSD
+    if [[ "$INSTALL_LSD" =~ ^[Yy]$ ]]; then
+        if command -v apt &> /dev/null; then
+            echo "[INFO] Installing lsd via apt..."
+            echo "       You may be prompted for your sudo password."
+            if sudo apt update && sudo apt install -y lsd; then
+                echo "[OK] lsd installed."
+            else
+                echo "[WARN] lsd installation failed. Please install lsd manually."
+            fi
+        else
+            echo "[WARN] Could not detect apt. Please install lsd manually."
+        fi
+    fi
+    echo
+fi
+
 TIMESTAMP=$(date +%Y%m%d-%H%M)
 BASHRC_EXISTED=false
 
@@ -24,8 +60,7 @@ fi
 echo
 echo "[INFO] Checking if dotfiles are already configured..."
 
-# shellcheck disable=SC2016
-if grep -q 'source "$HOME/dotfiles/.bashrc_custom"' "$HOME/.bashrc"; then
+if grep -Fq "source ${BASHRC_CUSTOM_ESCAPED}" "$HOME/.bashrc"; then
     echo "[OK] Dotfiles are already configured."
 else
     echo "[INFO] Adding dotfiles configuration..."
@@ -35,13 +70,13 @@ else
         echo "[OK] Backup created: $HOME/.bashrc.backup.${TIMESTAMP}"
     fi
 
-    cat <<'EOF' >> "$HOME/.bashrc"
-
-# Load custom dotfiles configuration
-if [ -f "$HOME/dotfiles/.bashrc_custom" ]; then
-    source "$HOME/dotfiles/.bashrc_custom"
-fi
-EOF
+    {
+        echo
+        echo "# Load custom dotfiles configuration"
+        echo "if [ -f ${BASHRC_CUSTOM_ESCAPED} ]; then"
+        echo "    source ${BASHRC_CUSTOM_ESCAPED}"
+        echo "fi"
+    } >> "$HOME/.bashrc"
 
     echo "[OK] Configuration added."
 fi
