@@ -3,7 +3,7 @@
 > A portable Linux configuration that allows me to quickly recreate my preferred shell environment on any system.
 
 This repository contains my personal shell configuration, tools and workflows for Linux systems.
-It is designed to evolve as I learn, experiment and refine my Linux workflow.
+It evolves as I learn and tinker with Bash and Linux.
 
 The goal is simple:
 
