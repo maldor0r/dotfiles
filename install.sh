@@ -7,14 +7,14 @@ echo
 
 echo "[INFO] Setting up your dotfiles..."
 
-# Create a timestamp for backups
 TIMESTAMP=$(date +%Y%m%d-%H%M)
+BASHRC_EXISTED=false
 
 echo "[INFO] Checking for ~/.bashrc..."
 
-if [ -f ~/.bashrc ]; then
-    cp ~/.bashrc ~/.bashrc.backup.$TIMESTAMP
-    echo "[OK] Backup created."
+if [ -f "$HOME/.bashrc" ]; then
+    BASHRC_EXISTED=true
+    echo "[OK] Existing .bashrc found."
 else
     echo "[INFO] No existing .bashrc found."
     touch "$HOME/.bashrc"
@@ -24,12 +24,18 @@ fi
 echo
 echo "[INFO] Checking if dotfiles are already configured..."
 
-if grep -q 'source "$HOME/dotfiles/.bashrc_custom"' ~/.bashrc; then
+# shellcheck disable=SC2016
+if grep -q 'source "$HOME/dotfiles/.bashrc_custom"' "$HOME/.bashrc"; then
     echo "[OK] Dotfiles are already configured."
 else
     echo "[INFO] Adding dotfiles configuration..."
 
-    cat <<'EOF' >> ~/.bashrc
+    if [ "$BASHRC_EXISTED" = true ]; then
+        cp "$HOME/.bashrc" "$HOME/.bashrc.backup.${TIMESTAMP}"
+        echo "[OK] Backup created: $HOME/.bashrc.backup.${TIMESTAMP}"
+    fi
+
+    cat <<'EOF' >> "$HOME/.bashrc"
 
 # Load custom dotfiles configuration
 if [ -f "$HOME/dotfiles/.bashrc_custom" ]; then
