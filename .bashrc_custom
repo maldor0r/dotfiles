@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # ==========================================================
 # Custom Bash configuration
 # Author: maldor0r
@@ -7,7 +8,11 @@
 # lsd aliases
 # ----------------------------------------------------------
 
-alias ls='lsd --group-directories-first'
-alias la='lsd -a --group-directories-first'
-alias ll='lsd -l --group-directories-first'
-alias lt='lsd -a --tree --depth 3 --group-directories-first'
+alias ls='lsd --group-directories-first'          # basic, no hidden
+alias la='lsd -a --group-directories-first'        # basic, with hidden
+alias ll='lsd -l --group-directories-first'        # long, no hidden
+alias lla='lsd -la --group-directories-first'      # long, with hidden
+alias lt='lsd --tree --depth 3 --group-directories-first'   # tree, no hidden
+alias lta='lsd -a --tree --depth 3 --group-directories-first' # tree, with hidden
+alias llt='lsd -l --tree --depth 3 --group-directories-first' # tree + long, no hidden
+alias llta='lsd -la --tree --depth 3 --group-directories-first' # tree + long, with hidden

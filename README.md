@@ -17,6 +17,21 @@ I want to rebuild my preferred working environment in just a few minutes.
 - Git version control
 - Safe installation with automatic backups
 
+## Aliases
+
+The following `lsd` aliases are available after installation:
+
+| Alias | Command | Description |
+|-------|---------|-------------|
+| `ls` | `lsd --group-directories-first` | Basic listing, no hidden files |
+| `la` | `lsd -a --group-directories-first` | Basic listing, with hidden files |
+| `ll` | `lsd -l --group-directories-first` | Long listing, no hidden files |
+| `lla` | `lsd -la --group-directories-first` | Long listing, with hidden files |
+| `lt` | `lsd --tree --depth 3 --group-directories-first` | Tree view, no hidden files |
+| `lta` | `lsd -a --tree --depth 3 --group-directories-first` | Tree view, with hidden files |
+| `llt` | `lsd -l --tree --depth 3 --group-directories-first` | Tree + long, no hidden files |
+| `llta` | `lsd -la --tree --depth 3 --group-directories-first` | Tree + long, with hidden files |
+
 ## Installation
 
 Clone the repository:
