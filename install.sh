@@ -65,9 +65,11 @@ if command -v lsd &> /dev/null; then
     echo
     echo "       Choose icon style:"
     if $NERD_FOUND; then
+        echo "       Nerd Font: detected ✓"
         echo "         1) Fancy icons (requires Nerd Font)  [default]"
         DEFAULT_CHOICE=1
     else
+        echo "       Nerd Font: not detected"
         echo "         1) Fancy icons (requires Nerd Font)"
     fi
     echo "         2) Unicode icons (works on any terminal)"
