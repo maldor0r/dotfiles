@@ -1,0 +1,5 @@
+# lsd configuration - unicode icons (works on any terminal)
+icons:
+  when: auto
+  theme: unicode
+  separator: " "

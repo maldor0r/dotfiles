@@ -13,11 +13,12 @@ I want to rebuild my preferred working environment in just a few minutes.
 ## Features
 
 - Custom shell configuration
-- `lsd` aliases
+- `lsd` aliases with icon configuration
 - Git version control
 - Safe installation with automatic backups
 
-## Aliases
+<details>
+<summary><h2 style="display: inline">Aliases</h2></summary>
 
 When `lsd` is installed, the following aliases are available after installation:
 
@@ -33,6 +34,8 @@ When `lsd` is installed, the following aliases are available after installation:
 | `llta` | `lsd -la --tree --depth 3 --group-directories-first` | Tree + long, with hidden files |
 
 If `lsd` is not installed, basic fallback aliases are used for `ls`, `la`, `ll`, and `lla`.
+
+</details>
 
 ## Installation
 
@@ -59,6 +62,18 @@ The installer will:
 - Point `.bashrc` to this cloned repository's `.bashrc_custom`
 - Avoid adding duplicate configuration blocks
 - Warn if `lsd` is not installed and offer to install
+- Configure lsd icons (fancy, unicode, or none)
+
+## Configuration
+
+The repository includes pre-configured templates for `lsd` in `config/lsd/`:
+
+- `config-fancy.yaml` — Nerd Font icons (default)
+- `config-unicode.yaml` — Unicode icons (works on any terminal)
+- `config-no-icons.yaml` — No icons
+
+The installer copies the chosen template to `~/.config/lsd/config.yaml`.
+You can re-run the installer or edit that file directly to change later.
 
 ## Roadmap
 

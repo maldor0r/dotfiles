@@ -43,6 +43,73 @@ if ! command -v lsd &> /dev/null; then
     echo
 fi
 
+# ----------------------------------------------------------
+# Configure lsd icons
+# ----------------------------------------------------------
+
+if command -v lsd &> /dev/null; then
+    echo
+    echo "[INFO] Configuring lsd icons..."
+
+    # Try to auto-detect Nerd Fonts (look for "Nerd" or "NF" in font names)
+    # If detection fails, fonts may be on host system (e.g. WSL)
+    NERD_FOUND=false
+    if command -v fc-list &> /dev/null; then
+        fc-list : family 2>/dev/null | grep -qiE "nerd| nf" && NERD_FOUND=true
+    fi
+    if ! $NERD_FOUND; then
+        find "$HOME/.fonts" "$HOME/.local/share/fonts" /usr/share/fonts /usr/local/share/fonts \
+            -maxdepth 3 \( -iname "*nerd*" -o -iname "* nf*" -o -iname "*-nf*" \) 2>/dev/null | grep -q . && NERD_FOUND=true
+    fi
+
+    echo
+    echo "       Choose icon style:"
+    if $NERD_FOUND; then
+        echo "         1) Fancy icons (requires Nerd Font)  [default]"
+        DEFAULT_CHOICE=1
+    else
+        echo "         1) Fancy icons (requires Nerd Font)"
+    fi
+    echo "         2) Unicode icons (works on any terminal)"
+    if $NERD_FOUND; then
+        echo "         3) No icons"
+    else
+        echo "         3) No icons  [default]"
+        DEFAULT_CHOICE=3
+    fi
+    read -rp "       Enter choice or press Enter for default [$DEFAULT_CHOICE]: " ICON_CHOICE
+    ICON_CHOICE=${ICON_CHOICE:-$DEFAULT_CHOICE}
+
+    case "$ICON_CHOICE" in
+        1)
+            rm -f "$HOME/.config/lsd/config.yaml"
+            echo "[OK] Using fancy Nerd Font icons."
+            ;;
+        2)
+            mkdir -p "$HOME/.config/lsd"
+            cp "$DOTFILES_DIR/config/lsd/config-unicode.yaml" "$HOME/.config/lsd/config.yaml"
+            echo "[OK] Using unicode icons."
+            ;;
+        3)
+            mkdir -p "$HOME/.config/lsd"
+            cp "$DOTFILES_DIR/config/lsd/config-no-icons.yaml" "$HOME/.config/lsd/config.yaml"
+            echo "[OK] Icons disabled."
+            ;;
+        *)
+            echo "[WARN] Invalid choice. Using default."
+            if $NERD_FOUND; then
+                rm -f "$HOME/.config/lsd/config.yaml"
+                echo "[OK] Using fancy Nerd Font icons."
+            else
+                mkdir -p "$HOME/.config/lsd"
+                cp "$DOTFILES_DIR/config/lsd/config-no-icons.yaml" "$HOME/.config/lsd/config.yaml"
+                echo "[OK] Icons disabled."
+            fi
+            ;;
+    esac
+    echo
+fi
+
 TIMESTAMP=$(date +%Y%m%d-%H%M)
 BASHRC_EXISTED=false
 

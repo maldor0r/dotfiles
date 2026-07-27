@@ -1,0 +1,5 @@
+# lsd configuration - fancy icons (requires Nerd Font)
+icons:
+  when: auto
+  theme: fancy
+  separator: " "

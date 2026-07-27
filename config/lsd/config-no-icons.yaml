@@ -1,0 +1,3 @@
+# lsd configuration - no icons
+icons:
+  when: never
