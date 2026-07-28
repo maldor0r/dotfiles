@@ -200,14 +200,15 @@ if ! command -v lsd &> /dev/null; then
 fi
 
 TIMESTAMP=$(date +%Y%m%d-%H%M)
-BASHRC_EXISTED=false
 
 echo
 echo "[INFO] Setting up ~/.bashrc..."
 
 if [ -f "$HOME/.bashrc" ]; then
-    BASHRC_EXISTED=true
     echo "[OK] Existing .bashrc found."
+    # Create backup before any modifications
+    cp "$HOME/.bashrc" "$HOME/.bashrc.backup.${TIMESTAMP}"
+    echo "[OK] Backup created: $HOME/.bashrc.backup.${TIMESTAMP}"
 else
     echo "[INFO] No existing .bashrc found."
     touch "$HOME/.bashrc"
@@ -233,12 +234,6 @@ if grep -Fq "source ${BASHRC_CUSTOM_ESCAPED}" "$HOME/.bashrc"; then
     echo "[OK] Dotfiles are already configured."
 else
     echo "[INFO] Adding dotfiles configuration..."
-
-    if [ "$BASHRC_EXISTED" = true ]; then
-        cp "$HOME/.bashrc" "$HOME/.bashrc.backup.${TIMESTAMP}"
-        echo "[OK] Backup created: $HOME/.bashrc.backup.${TIMESTAMP}"
-    fi
-
     {
         echo
         echo "# Load custom dotfiles configuration"
@@ -246,7 +241,6 @@ else
         echo "    source ${BASHRC_CUSTOM_ESCAPED}"
         echo "fi"
     } >> "$HOME/.bashrc"
-
     echo "[OK] Configuration added."
 fi
 
