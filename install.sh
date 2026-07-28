@@ -52,7 +52,7 @@ if ! command -v lsd &> /dev/null; then
             if [ "$PKG_MANAGER" = "apt" ]; then
                 sudo apt update > /dev/null 2>&1 && sudo apt install -y lsd > /dev/null 2>&1
             else
-                sudo $PKG_MANAGER install -y lsd > /dev/null 2>&1
+                sudo "$PKG_MANAGER" install -y lsd > /dev/null 2>&1
             fi
             if command -v lsd &> /dev/null; then
                 echo "[OK] lsd installed."
@@ -91,7 +91,7 @@ if command -v lsd &> /dev/null; then
     echo
     echo "       Choose icon style:"
     if $NERD_FOUND; then
-        echo "       Nerd Font: detected ✓"
+        echo "       ✓ Nerd Font found"
         echo "         1) Fancy icons (requires Nerd Font)  [default]"
         DEFAULT_CHOICE=1
     else
@@ -156,12 +156,8 @@ if ! [ -f "$BLESH_DIR/ble.sh" ]; then
                 echo "[INFO] 'make' is needed to build ble.sh."
                 read -rp "       Install make now? (y/N): " INSTALL_MAKE
                 if [[ "$INSTALL_MAKE" =~ ^[Yy]$ ]]; then
-                    if command -v dnf &> /dev/null; then
-                        sudo dnf install -y make > /dev/null 2>&1
-                    elif command -v yum &> /dev/null; then
-                        sudo yum install -y make > /dev/null 2>&1
-                    elif command -v apt &> /dev/null; then
-                        sudo apt install -y make > /dev/null 2>&1
+                    if [ -n "$PKG_MANAGER" ]; then
+                        sudo "$PKG_MANAGER" install -y make > /dev/null 2>&1
                     fi
                 fi
             fi
