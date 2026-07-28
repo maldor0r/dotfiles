@@ -95,7 +95,7 @@ if command -v lsd &> /dev/null; then
         echo "         1) Fancy icons (requires Nerd Font)  [default]"
         DEFAULT_CHOICE=1
     else
-        echo "       Nerd Font: not detected"
+        echo "       ✗ Nerd Font not detected"
         echo "         1) Fancy icons (requires Nerd Font)"
     fi
     echo "         2) Unicode icons (works on any terminal)"
@@ -158,6 +158,9 @@ if ! [ -f "$BLESH_DIR/ble.sh" ]; then
                 if [[ "$INSTALL_MAKE" =~ ^[Yy]$ ]]; then
                     if [ -n "$PKG_MANAGER" ]; then
                         sudo "$PKG_MANAGER" install -y make > /dev/null 2>&1
+                    else
+                        echo "[WARN] Could not detect a supported package manager."
+                        echo "       Please install make manually, then re-run this script."
                     fi
                 fi
             fi
