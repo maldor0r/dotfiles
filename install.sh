@@ -95,7 +95,7 @@ if command -v lsd &> /dev/null; then
         echo "         1) Fancy icons (requires Nerd Font)  [default]"
         DEFAULT_CHOICE=1
     else
-        echo "       ✗ Nerd Font not detected"
+        echo "       ✗ Nerd Font not found"
         echo "         1) Fancy icons (requires Nerd Font)"
     fi
     echo "         2) Unicode icons (works on any terminal)"
