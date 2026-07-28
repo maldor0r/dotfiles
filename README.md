@@ -77,17 +77,6 @@ The repository includes pre-configured templates for `lsd` in `config/lsd/`:
 The installer copies the chosen template to `~/.config/lsd/config.yaml`.
 You can re-run the installer or edit that file directly to change later.
 
-## ble.sh Configuration
-
-`ble.sh` (Bash Line Editor) provides syntax highlighting, autocomplete,
-and a modern terminal experience in pure Bash.
-
-The installer builds it from [GitHub](https://github.com/akinomyoga/ble.sh)
-and adds it to your `.bashrc`. If `make` is not installed, it will be
-automatically installed via your package manager.
-
-Custom settings go in `~/.blerc` (created automatically by ble.sh on first run).
-
 ## Roadmap
 
 - [x] Custom Bash configuration
