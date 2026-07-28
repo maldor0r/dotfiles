@@ -139,18 +139,51 @@ if command -v lsd &> /dev/null; then
 fi
 
 # ----------------------------------------------------------
+# ble.sh — Bash Line Editor
+# ----------------------------------------------------------
+
+BLESH_DIR="$HOME/.local/share/blesh"
+
+if ! [ -f "$BLESH_DIR/ble.sh" ]; then
+    echo "[INFO] ble.sh (Bash Line Editor) is not installed."
+    echo "       It adds syntax highlighting, autocomplete, and more."
+    echo ""
+    read -rp "       Install ble.sh now? (y/N): " INSTALL_BLESH
+    if [[ "$INSTALL_BLESH" =~ ^[Yy]$ ]]; then
+        if command -v git &> /dev/null && command -v make &> /dev/null; then
+            echo "[INFO] Installing ble.sh from GitHub..."
+            git clone --recursive --depth 1 --shallow-submodules \
+                https://github.com/akinomyoga/ble.sh.git /tmp/ble.sh \
+                > /dev/null 2>&1
+            if make -C /tmp/ble.sh install PREFIX="$HOME/.local" > /dev/null 2>&1; then
+                rm -rf /tmp/ble.sh
+                echo "[OK] ble.sh installed."
+            else
+                echo "[WARN] ble.sh installation failed."
+                echo "       You can install it manually later from:"
+                echo "         https://github.com/akinomyoga/ble.sh"
+            fi
+        else
+            echo "[WARN] git and make are required to install ble.sh."
+            echo "       Install them first, then re-run this script."
+        fi
+    fi
+fi
+
+# ----------------------------------------------------------
 # Shell setup
 # ----------------------------------------------------------
 
 if ! command -v lsd &> /dev/null; then
+    echo
     echo "[INFO] lsd not available — using basic ls aliases."
     echo "       Install lsd later and re-run this script to enable icons."
-    echo
 fi
 
 TIMESTAMP=$(date +%Y%m%d-%H%M)
 BASHRC_EXISTED=false
 
+echo
 echo "[INFO] Setting up ~/.bashrc..."
 
 if [ -f "$HOME/.bashrc" ]; then
@@ -160,6 +193,18 @@ else
     echo "[INFO] No existing .bashrc found."
     touch "$HOME/.bashrc"
     echo "[OK] Created new .bashrc."
+fi
+
+# Add ble.sh source if installed
+if [ -f "$BLESH_DIR/ble.sh" ] && ! grep -Fq "blesh/ble.sh" "$HOME/.bashrc"; then
+    echo
+    echo "[INFO] Adding ble.sh to ~/.bashrc..."
+    {
+        echo
+        echo "# Bash Line Editor (ble.sh)"
+        echo "source \$HOME/.local/share/blesh/ble.sh"
+    } >> "$HOME/.bashrc"
+    echo "[OK] ble.sh added to ~/.bashrc."
 fi
 
 echo
@@ -191,12 +236,14 @@ echo "========================================="
 echo "         Setup Complete"
 echo "========================================="
 echo
+echo "  ✅ Dotfiles configured"
 if command -v lsd &> /dev/null; then
-    echo "  ✅ Dotfiles configured"
     echo "  ✅ lsd ready with your icon settings"
 else
-    echo "  ✅ Dotfiles configured"
     echo "  ⚠️  lsd not installed — using basic ls aliases"
+fi
+if [ -f "$BLESH_DIR/ble.sh" ]; then
+    echo "  ✅ ble.sh ready"
 fi
 echo
 echo "To apply the changes, run: source ~/.bashrc"
