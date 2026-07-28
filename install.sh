@@ -50,9 +50,9 @@ if ! command -v lsd &> /dev/null; then
             echo "[INFO] Installing lsd via $PKG_MANAGER..."
             echo "       You may be prompted for your sudo password."
             if [ "$PKG_MANAGER" = "apt" ]; then
-                sudo apt update && sudo apt install -y lsd
+                sudo apt update > /dev/null 2>&1 && sudo apt install -y lsd > /dev/null 2>&1
             else
-                sudo $PKG_MANAGER install -y lsd
+                sudo $PKG_MANAGER install -y lsd > /dev/null 2>&1
             fi
             if command -v lsd &> /dev/null; then
                 echo "[OK] lsd installed."
