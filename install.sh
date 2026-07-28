@@ -57,13 +57,16 @@ if ! command -v lsd &> /dev/null; then
             if command -v lsd &> /dev/null; then
                 echo "[OK] lsd installed."
             else
-                echo "[WARN] lsd installation failed. Please install lsd manually."
+                echo "[WARN] lsd installation failed."
+                echo "       You can install it manually later from:"
+                echo "         https://github.com/lsd-rs/lsd/releases"
             fi
         else
-            echo "[WARN] Could not detect a package manager. Please install lsd manually."
+            echo "[WARN] Could not detect a package manager."
+            echo "       Please install lsd manually from:"
+            echo "         https://github.com/lsd-rs/lsd/releases"
         fi
     fi
-    echo
 fi
 
 # ----------------------------------------------------------
@@ -135,10 +138,20 @@ if command -v lsd &> /dev/null; then
     echo
 fi
 
+# ----------------------------------------------------------
+# Shell setup
+# ----------------------------------------------------------
+
+if ! command -v lsd &> /dev/null; then
+    echo "[INFO] lsd not available — using basic ls aliases."
+    echo "       Install lsd later and re-run this script to enable icons."
+    echo
+fi
+
 TIMESTAMP=$(date +%Y%m%d-%H%M)
 BASHRC_EXISTED=false
 
-echo "[INFO] Checking for ~/.bashrc..."
+echo "[INFO] Setting up ~/.bashrc..."
 
 if [ -f "$HOME/.bashrc" ]; then
     BASHRC_EXISTED=true
@@ -174,6 +187,17 @@ else
 fi
 
 echo
-echo "[SUCCESS] Installation complete!"
+echo "========================================="
+echo "         Setup Complete"
+echo "========================================="
 echo
-echo "To apply the changes, run 'source ~/.bashrc' or restart your terminal."
+if command -v lsd &> /dev/null; then
+    echo "  ✅ Dotfiles configured"
+    echo "  ✅ lsd ready with your icon settings"
+else
+    echo "  ✅ Dotfiles configured"
+    echo "  ⚠️  lsd not installed — using basic ls aliases"
+fi
+echo
+echo "To apply the changes, run: source ~/.bashrc"
+echo "Or open a new terminal."
