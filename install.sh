@@ -23,21 +23,44 @@ if ! command -v lsd &> /dev/null; then
     echo "       Install lsd manually from:"
     echo "         https://github.com/lsd-rs/lsd/releases"
     echo ""
-    echo "       Or on Debian/Ubuntu:"
-    echo "         sudo apt install lsd"
+
+    # Detect package manager
+    if command -v dnf &> /dev/null; then
+        PKG_MANAGER="dnf"
+        PKG_CMD="sudo dnf install lsd"
+    elif command -v yum &> /dev/null; then
+        PKG_MANAGER="yum"
+        PKG_CMD="sudo yum install lsd"
+    elif command -v apt &> /dev/null; then
+        PKG_MANAGER="apt"
+        PKG_CMD="sudo apt install lsd"
+    else
+        PKG_MANAGER=""
+        PKG_CMD=""
+    fi
+
+    if [ -n "$PKG_MANAGER" ]; then
+        echo "       Or install via $PKG_MANAGER:"
+        echo "         $PKG_CMD"
+    fi
     echo ""
     read -rp "       Install lsd now? (y/N): " INSTALL_LSD
     if [[ "$INSTALL_LSD" =~ ^[Yy]$ ]]; then
-        if command -v apt &> /dev/null; then
-            echo "[INFO] Installing lsd via apt..."
+        if [ -n "$PKG_MANAGER" ]; then
+            echo "[INFO] Installing lsd via $PKG_MANAGER..."
             echo "       You may be prompted for your sudo password."
-            if sudo apt update && sudo apt install -y lsd; then
+            if [ "$PKG_MANAGER" = "apt" ]; then
+                sudo apt update && sudo apt install -y lsd
+            else
+                sudo $PKG_MANAGER install -y lsd
+            fi
+            if command -v lsd &> /dev/null; then
                 echo "[OK] lsd installed."
             else
                 echo "[WARN] lsd installation failed. Please install lsd manually."
             fi
         else
-            echo "[WARN] Could not detect apt. Please install lsd manually."
+            echo "[WARN] Could not detect a package manager. Please install lsd manually."
         fi
     fi
     echo
