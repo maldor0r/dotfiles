@@ -150,22 +150,41 @@ if ! [ -f "$BLESH_DIR/ble.sh" ]; then
     echo ""
     read -rp "       Install ble.sh now? (y/N): " INSTALL_BLESH
     if [[ "$INSTALL_BLESH" =~ ^[Yy]$ ]]; then
-        if command -v git &> /dev/null && command -v make &> /dev/null; then
-            echo "[INFO] Installing ble.sh from GitHub..."
-            git clone --recursive --depth 1 --shallow-submodules \
-                https://github.com/akinomyoga/ble.sh.git /tmp/ble.sh \
-                > /dev/null 2>&1
-            if make -C /tmp/ble.sh install PREFIX="$HOME/.local" > /dev/null 2>&1; then
-                rm -rf /tmp/ble.sh
-                echo "[OK] ble.sh installed."
+        if command -v git &> /dev/null; then
+            # Ensure make is available for building ble.sh
+            if ! command -v make &> /dev/null; then
+                echo "[INFO] 'make' is needed to build ble.sh."
+                read -rp "       Install make now? (y/N): " INSTALL_MAKE
+                if [[ "$INSTALL_MAKE" =~ ^[Yy]$ ]]; then
+                    if command -v dnf &> /dev/null; then
+                        sudo dnf install -y make > /dev/null 2>&1
+                    elif command -v yum &> /dev/null; then
+                        sudo yum install -y make > /dev/null 2>&1
+                    elif command -v apt &> /dev/null; then
+                        sudo apt install -y make > /dev/null 2>&1
+                    fi
+                fi
+            fi
+
+            if command -v make &> /dev/null; then
+                echo "[INFO] Installing ble.sh from GitHub..."
+                git clone --recursive --depth 1 --shallow-submodules \
+                    https://github.com/akinomyoga/ble.sh.git /tmp/ble.sh \
+                    > /dev/null 2>&1
+                if make -C /tmp/ble.sh install PREFIX="$HOME/.local" > /dev/null 2>&1; then
+                    rm -rf /tmp/ble.sh
+                    echo "[OK] ble.sh installed."
+                else
+                    echo "[WARN] ble.sh installation failed."
+                    echo "       You can install it manually later from:"
+                    echo "         https://github.com/akinomyoga/ble.sh"
+                fi
             else
-                echo "[WARN] ble.sh installation failed."
-                echo "       You can install it manually later from:"
-                echo "         https://github.com/akinomyoga/ble.sh"
+                echo "[WARN] make is required to install ble.sh."
+                echo "       Install it manually, then re-run this script."
             fi
         else
-            echo "[WARN] git and make are required to install ble.sh."
-            echo "       Install them first, then re-run this script."
+            echo "[WARN] git is required to install ble.sh."
         fi
     fi
 fi
