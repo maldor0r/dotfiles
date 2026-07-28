@@ -14,6 +14,7 @@ I want to rebuild my preferred working environment in just a few minutes.
 
 - Custom shell configuration
 - `lsd` aliases with icon configuration
+- `ble.sh` (Bash Line Editor) with syntax highlighting and autocomplete
 - Git version control
 - Safe installation with automatic backups
 
@@ -63,6 +64,7 @@ The installer will:
 - Avoid adding duplicate configuration blocks
 - Warn if `lsd` is not installed and offer to install
 - Configure lsd icons (fancy, unicode, or none)
+- Install `ble.sh` with syntax highlighting and autocomplete
 
 ## Configuration
 
@@ -75,11 +77,23 @@ The repository includes pre-configured templates for `lsd` in `config/lsd/`:
 The installer copies the chosen template to `~/.config/lsd/config.yaml`.
 You can re-run the installer or edit that file directly to change later.
 
+## ble.sh Configuration
+
+`ble.sh` (Bash Line Editor) provides syntax highlighting, autocomplete,
+and a modern terminal experience in pure Bash.
+
+The installer builds it from [GitHub](https://github.com/akinomyoga/ble.sh)
+and adds it to your `.bashrc`. If `make` is not installed, it will be
+automatically installed via your package manager.
+
+Custom settings go in `~/.blerc` (created automatically by ble.sh on first run).
+
 ## Roadmap
 
 - [x] Custom Bash configuration
 - [x] Initial `lsd` aliases
 - [x] Installation script
+- [x] `ble.sh` integration
 - [ ] Git configuration
 - [ ] Bash functions
 - [ ] Additional shell improvements
