@@ -6,6 +6,9 @@ echo "========================================="
 echo
 
 echo "[INFO] Setting up your dotfiles..."
+echo "[INFO] This script uses sudo for package installations."
+echo "       You may be prompted for your password."
+echo
 
 DOTFILES_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 BASHRC_CUSTOM="$DOTFILES_DIR/.bashrc_custom"
