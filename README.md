@@ -15,6 +15,7 @@ I want to rebuild my preferred working environment in just a few minutes.
 - Custom shell configuration
 - `lsd` aliases with icon configuration
 - `ble.sh` (Bash Line Editor) with syntax highlighting and autocomplete
+- **starship** prompt with pastel-powerline preset
 - Git version control
 - Safe installation with automatic backups
 
@@ -40,42 +41,25 @@ If `lsd` is not installed, basic fallback aliases are used for `ls`, `la`, `ll`,
 
 ## Installation
 
-Clone the repository:
-
 ```bash
 git clone https://github.com/maldor0r/dotfiles
-```
-
-Run the installer from the cloned folder:
-
-```bash
 cd dotfiles
 ./install.sh
 ```
 
-The repository does not have to be cloned directly into your home directory; the installer uses its own location.
-
-The installer will:
-
-- Create a backup of your existing `.bashrc`
-- Create a new `.bashrc` if none exists
-- Add the custom dotfiles configuration
-- Point `.bashrc` to this cloned repository's `.bashrc_custom`
-- Avoid adding duplicate configuration blocks
-- Warn if `lsd` is not installed and offer to install
-- Configure lsd icons (fancy, unicode, or none)
-- Install `ble.sh` with syntax highlighting and autocomplete
+The installer auto-installs `lsd`, `ble.sh`, and `starship` (if missing), asks once for the
+lsd icon style, and wires `.bashrc` to the repo's `.bashrc_custom`. Existing `.bashrc` is
+backed up automatically.
 
 ## Configuration
 
-The repository includes pre-configured templates for `lsd` in `config/lsd/`:
+Pre-configured templates are in `config/`:
 
-- `config-fancy.yaml` — Nerd Font icons (default)
-- `config-unicode.yaml` — Unicode icons (works on any terminal)
-- `config-no-icons.yaml` — No icons
+- `config/lsd/` — `config-fancy.yaml`, `config-unicode.yaml`, `config-no-icons.yaml`
+- `config/starship/starship.toml` — pastel-powerline preset
 
-The installer copies the chosen template to `~/.config/lsd/config.yaml`.
-You can re-run the installer or edit that file directly to change later.
+Copy the desired template to `~/.config/lsd/config.yaml` or `~/.config/starship.toml`,
+or re-run the installer.
 
 ## Roadmap
 
@@ -83,6 +67,7 @@ You can re-run the installer or edit that file directly to change later.
 - [x] Initial `lsd` aliases
 - [x] Installation script
 - [x] `ble.sh` integration
+- [x] starship prompt
 - [ ] Git configuration
 - [ ] Bash functions
 - [ ] Additional shell improvements

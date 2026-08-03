@@ -24,3 +24,11 @@ else
     alias ll='ls -l --color=auto'
     alias lla='ls -lA --color=auto'
 fi
+
+# ----------------------------------------------------------
+# starship prompt
+# ----------------------------------------------------------
+
+if command -v starship &> /dev/null; then
+    eval "$(starship init bash)"
+fi

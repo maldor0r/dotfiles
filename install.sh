@@ -11,61 +11,92 @@ DOTFILES_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 BASHRC_CUSTOM="$DOTFILES_DIR/.bashrc_custom"
 BASHRC_CUSTOM_ESCAPED=$(printf '%q' "$BASHRC_CUSTOM")
 
+# Detect package manager (used for lsd and make)
+if command -v dnf &> /dev/null; then
+    PKG_MANAGER="dnf"
+elif command -v yum &> /dev/null; then
+    PKG_MANAGER="yum"
+elif command -v apt &> /dev/null; then
+    PKG_MANAGER="apt"
+else
+    PKG_MANAGER=""
+fi
+
 # ----------------------------------------------------------
-# Check prerequisites
+# lsd
 # ----------------------------------------------------------
 
 if ! command -v lsd &> /dev/null; then
-    echo "[WARN] 'lsd' is not installed."
-    echo "       The custom aliases require lsd for the full experience."
-    echo "       Without it, basic ls fallbacks will be used."
-    echo ""
-    echo "       Install lsd manually from:"
-    echo "         https://github.com/lsd-rs/lsd/releases"
-    echo ""
-
-    # Detect package manager
-    if command -v dnf &> /dev/null; then
-        PKG_MANAGER="dnf"
-        PKG_CMD="sudo dnf install lsd"
-    elif command -v yum &> /dev/null; then
-        PKG_MANAGER="yum"
-        PKG_CMD="sudo yum install lsd"
-    elif command -v apt &> /dev/null; then
-        PKG_MANAGER="apt"
-        PKG_CMD="sudo apt install lsd"
+    echo "[INFO] Installing lsd..."
+    if [ "$PKG_MANAGER" = "apt" ]; then
+        sudo apt update > /dev/null 2>&1 && sudo apt install -y lsd > /dev/null 2>&1
+    elif [ -n "$PKG_MANAGER" ]; then
+        sudo "$PKG_MANAGER" install -y lsd > /dev/null 2>&1
+    fi
+    if command -v lsd &> /dev/null; then
+        echo "[OK] lsd installed."
     else
-        PKG_MANAGER=""
-        PKG_CMD=""
+        echo "[WARN] Could not install lsd automatically."
+        echo "       Install it manually from:"
+        echo "         https://github.com/lsd-rs/lsd/releases"
     fi
+fi
 
-    if [ -n "$PKG_MANAGER" ]; then
-        echo "       Or install via $PKG_MANAGER:"
-        echo "         $PKG_CMD"
-    fi
-    echo ""
-    read -rp "       Install lsd now? (y/N): " INSTALL_LSD
-    if [[ "$INSTALL_LSD" =~ ^[Yy]$ ]]; then
-        if [ -n "$PKG_MANAGER" ]; then
-            echo "[INFO] Installing lsd via $PKG_MANAGER..."
-            echo "       You may be prompted for your sudo password."
-            if [ "$PKG_MANAGER" = "apt" ]; then
-                sudo apt update > /dev/null 2>&1 && sudo apt install -y lsd > /dev/null 2>&1
-            else
-                sudo "$PKG_MANAGER" install -y lsd > /dev/null 2>&1
+# ----------------------------------------------------------
+# ble.sh — Bash Line Editor
+# ----------------------------------------------------------
+
+BLESH_DIR="$HOME/.local/share/blesh"
+
+if ! [ -f "$BLESH_DIR/ble.sh" ]; then
+    echo "[INFO] Installing ble.sh (Bash Line Editor)..."
+    if command -v git &> /dev/null; then
+        if ! command -v make &> /dev/null; then
+            echo "[INFO] Installing make..."
+            if [ -n "$PKG_MANAGER" ]; then
+                sudo "$PKG_MANAGER" install -y make > /dev/null 2>&1
             fi
-            if command -v lsd &> /dev/null; then
-                echo "[OK] lsd installed."
+        fi
+        if command -v make &> /dev/null; then
+            echo "[INFO] Building ble.sh from GitHub..."
+            git clone --recursive --depth 1 --shallow-submodules \
+                https://github.com/akinomyoga/ble.sh.git /tmp/ble.sh \
+                > /dev/null 2>&1
+            if make -C /tmp/ble.sh install PREFIX="$HOME/.local" > /dev/null 2>&1; then
+                rm -rf /tmp/ble.sh
+                echo "[OK] ble.sh installed."
             else
-                echo "[WARN] lsd installation failed."
+                echo "[WARN] ble.sh installation failed."
                 echo "       You can install it manually later from:"
-                echo "         https://github.com/lsd-rs/lsd/releases"
+                echo "         https://github.com/akinomyoga/ble.sh"
             fi
         else
-            echo "[WARN] Could not detect a package manager."
-            echo "       Please install lsd manually from:"
-            echo "         https://github.com/lsd-rs/lsd/releases"
+            echo "[WARN] make is required to build ble.sh."
+            echo "       Install it manually, then re-run this script."
         fi
+    else
+        echo "[WARN] git is required to install ble.sh."
+        echo "       Install it manually, then re-run this script."
+    fi
+fi
+
+# ----------------------------------------------------------
+# starship prompt
+# ----------------------------------------------------------
+
+if ! command -v starship &> /dev/null; then
+    echo "[INFO] Installing starship..."
+    if command -v curl &> /dev/null; then
+        if curl -sS https://starship.rs/install.sh | sudo sh -s -- -y > /dev/null 2>&1; then
+            echo "[OK] starship installed."
+        else
+            echo "[WARN] starship installation failed."
+            echo "       You can install it manually later from:"
+            echo "         https://starship.rs/install.sh"
+        fi
+    else
+        echo "[WARN] curl is required to install starship."
+        echo "       Install it manually, then re-run this script."
     fi
 fi
 
@@ -78,7 +109,8 @@ if command -v lsd &> /dev/null; then
     echo "[INFO] Configuring lsd icons..."
 
     # Try to auto-detect Nerd Fonts (look for "Nerd" or "NF" in font names)
-    # If detection fails, fonts may be on host system (e.g. WSL)
+    # Note: on WSL this may not find fonts installed on the Windows host,
+    # so the user can still pick Fancy manually.
     NERD_FOUND=false
     if command -v fc-list &> /dev/null; then
         fc-list : family 2>/dev/null | grep -qiE "nerd| nf" && NERD_FOUND=true
@@ -139,68 +171,23 @@ if command -v lsd &> /dev/null; then
 fi
 
 # ----------------------------------------------------------
-# ble.sh — Bash Line Editor
+# starship config
 # ----------------------------------------------------------
 
-BLESH_DIR="$HOME/.local/share/blesh"
-
-if ! [ -f "$BLESH_DIR/ble.sh" ]; then
-    echo "[INFO] ble.sh (Bash Line Editor) is not installed."
-    echo "       It adds syntax highlighting, autocomplete, and more."
-    echo ""
-    read -rp "       Install ble.sh now? (y/N): " INSTALL_BLESH
-    if [[ "$INSTALL_BLESH" =~ ^[Yy]$ ]]; then
-        if command -v git &> /dev/null; then
-            # Ensure make is available for building ble.sh
-            if ! command -v make &> /dev/null; then
-                echo "[INFO] 'make' is needed to build ble.sh."
-                read -rp "       Install make now? (y/N): " INSTALL_MAKE
-                if [[ "$INSTALL_MAKE" =~ ^[Yy]$ ]]; then
-                    if [ -n "$PKG_MANAGER" ]; then
-                        sudo "$PKG_MANAGER" install -y make > /dev/null 2>&1
-                    else
-                        echo "[WARN] Could not detect a supported package manager."
-                        echo "       Please install make manually, then re-run this script."
-                    fi
-                fi
-            fi
-
-            if command -v make &> /dev/null; then
-                echo "[INFO] Installing ble.sh from GitHub..."
-                git clone --recursive --depth 1 --shallow-submodules \
-                    https://github.com/akinomyoga/ble.sh.git /tmp/ble.sh \
-                    > /dev/null 2>&1
-                if make -C /tmp/ble.sh install PREFIX="$HOME/.local" > /dev/null 2>&1; then
-                    rm -rf /tmp/ble.sh
-                    echo "[OK] ble.sh installed."
-                else
-                    echo "[WARN] ble.sh installation failed."
-                    echo "       You can install it manually later from:"
-                    echo "         https://github.com/akinomyoga/ble.sh"
-                fi
-            else
-                echo "[WARN] make is required to install ble.sh."
-                echo "       Install it manually, then re-run this script."
-            fi
-        else
-            echo "[WARN] git is required to install ble.sh."
-        fi
-    fi
+if command -v starship &> /dev/null; then
+    echo "[INFO] Configuring starship with pastel-powerline preset..."
+    mkdir -p "$HOME/.config"
+    cp "$DOTFILES_DIR/config/starship/starship.toml" "$HOME/.config/starship.toml"
+    echo "[OK] starship configuration applied."
+    echo
 fi
 
 # ----------------------------------------------------------
 # Shell setup
 # ----------------------------------------------------------
 
-if ! command -v lsd &> /dev/null; then
-    echo
-    echo "[INFO] lsd not available — using basic ls aliases."
-    echo "       Install lsd later and re-run this script to enable icons."
-fi
-
 TIMESTAMP=$(date +%Y%m%d-%H%M)
 
-echo
 echo "[INFO] Setting up ~/.bashrc..."
 
 if [ -f "$HOME/.bashrc" ]; then
@@ -250,12 +237,15 @@ echo "========================================="
 echo
 echo "  ✅ Dotfiles configured"
 if command -v lsd &> /dev/null; then
-    echo "  ✅ lsd ready with your icon settings"
+    echo "  ✅ lsd ready with icons"
 else
     echo "  ⚠️  lsd not installed — using basic ls aliases"
 fi
 if [ -f "$BLESH_DIR/ble.sh" ]; then
     echo "  ✅ ble.sh ready"
+fi
+if command -v starship &> /dev/null; then
+    echo "  ✅ starship ready with pastel-powerline preset"
 fi
 echo
 echo "To apply the changes, run: source ~/.bashrc"
