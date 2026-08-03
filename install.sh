@@ -265,5 +265,5 @@ if command -v starship &> /dev/null; then
     echo "  ✅ starship ready with pastel-powerline preset"
 fi
 echo
-echo "To apply the changes, run: source ~/.bashrc"
-echo "Or open a new terminal."
+echo -e "\033[1;32m  \u25b6 To apply the changes, run: source ~/.bashrc\033[0m"
+echo -e "\033[1;32m    or open a new terminal.\033[0m"
