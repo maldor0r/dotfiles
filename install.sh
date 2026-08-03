@@ -14,12 +14,25 @@ BASHRC_CUSTOM_ESCAPED=$(printf '%q' "$BASHRC_CUSTOM")
 # Detect package manager (used for lsd and make)
 if command -v dnf &> /dev/null; then
     PKG_MANAGER="dnf"
+    PKG_INSTALL="sudo dnf install -y"
 elif command -v yum &> /dev/null; then
     PKG_MANAGER="yum"
+    PKG_INSTALL="sudo yum install -y"
 elif command -v apt &> /dev/null; then
     PKG_MANAGER="apt"
+    PKG_INSTALL="sudo apt install -y"
+elif command -v pacman &> /dev/null; then
+    PKG_MANAGER="pacman"
+    PKG_INSTALL="sudo pacman -S --noconfirm"
+elif command -v zypper &> /dev/null; then
+    PKG_MANAGER="zypper"
+    PKG_INSTALL="sudo zypper install -y"
+elif command -v apk &> /dev/null; then
+    PKG_MANAGER="apk"
+    PKG_INSTALL="sudo apk add"
 else
     PKG_MANAGER=""
+    PKG_INSTALL=""
 fi
 
 # ----------------------------------------------------------
@@ -28,10 +41,11 @@ fi
 
 if ! command -v lsd &> /dev/null; then
     echo "[INFO] Installing lsd..."
-    if [ "$PKG_MANAGER" = "apt" ]; then
-        sudo apt update > /dev/null 2>&1 && sudo apt install -y lsd > /dev/null 2>&1
-    elif [ -n "$PKG_MANAGER" ]; then
-        sudo "$PKG_MANAGER" install -y lsd > /dev/null 2>&1
+    if [ -n "$PKG_INSTALL" ]; then
+        if [ "$PKG_MANAGER" = "apt" ]; then
+            sudo apt update > /dev/null 2>&1
+        fi
+        $PKG_INSTALL lsd > /dev/null 2>&1
     fi
     if command -v lsd &> /dev/null; then
         echo "[OK] lsd installed."
@@ -53,8 +67,8 @@ if ! [ -f "$BLESH_DIR/ble.sh" ]; then
     if command -v git &> /dev/null; then
         if ! command -v make &> /dev/null; then
             echo "[INFO] Installing make..."
-            if [ -n "$PKG_MANAGER" ]; then
-                sudo "$PKG_MANAGER" install -y make > /dev/null 2>&1
+            if [ -n "$PKG_INSTALL" ]; then
+                $PKG_INSTALL make > /dev/null 2>&1
             fi
         fi
         if command -v make &> /dev/null; then
