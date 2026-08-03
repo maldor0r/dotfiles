@@ -42,9 +42,7 @@ If `lsd` is not installed, basic fallback aliases are used for `ls`, `la`, `ll`,
 ## Installation
 
 ```bash
-git clone https://github.com/maldor0r/dotfiles
-cd dotfiles
-./install.sh
+git clone https://github.com/maldor0r/dotfiles && cd dotfiles && ./install.sh
 ```
 
 The installer auto-installs `lsd`, `ble.sh`, and `starship` (if missing), asks once for the
