@@ -49,9 +49,6 @@ The installer auto-installs `lsd`, `ble.sh`, and `starship` (if missing), asks o
 lsd icon style, and wires `.bashrc` to the repo's `.bashrc_custom`. Existing `.bashrc` is
 backed up automatically.
 
-Compatible with Debian/Ubuntu (apt), Fedora/RHEL (dnf, yum), Arch (pacman),
-openSUSE (zypper), and Alpine (apk).
-
 ## Configuration
 
 Pre-configured templates are in `config/`:
