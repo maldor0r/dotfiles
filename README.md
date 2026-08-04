@@ -3,7 +3,7 @@
 > A portable shell configuration that allows me to quickly recreate
 > my preferred environment on any system.
 
-These are my personal dotfiles for Linux and Windows. They grow as I tinker,
+These are my personal dotfiles. They grow as I tinker,
 and let me get my environment back up in minutes on any machine.
 
 ## Features
@@ -37,13 +37,13 @@ If `lsd` is not installed, basic fallback aliases are used for `ls`, `la`, `ll`,
 
 ## Installation
 
-**Linux:**
+**Bash:**
 
 ```bash
 git clone https://github.com/maldor0r/dotfiles && cd dotfiles && ./install.sh
 ```
 
-**Windows (PowerShell):**
+**PowerShell:**
 
 ```powershell
 git clone https://github.com/maldor0r/dotfiles && cd dotfiles && .\install.ps1
@@ -75,4 +75,4 @@ or re-run the installer.
 
 ---
 
-> My home for every Linux machine.
+> My home for every machine.
