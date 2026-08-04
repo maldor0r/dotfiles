@@ -2,13 +2,8 @@
 
 > A portable Linux configuration that allows me to quickly recreate my preferred shell environment on any system.
 
-This repository contains my personal shell configuration, tools and workflows for Linux systems.
-It evolves as I learn and tinker with Bash and Linux.
-
-The goal is simple:
-
-Instead of configuring every new Linux installation from scratch,
-I want to rebuild my preferred working environment in just a few minutes.
+These are my personal dotfiles for Linux. They grow as I tinker,
+and let me get my environment back up in minutes on any machine.
 
 ## Features
 
