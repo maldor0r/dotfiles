@@ -1,8 +1,9 @@
 # Dotfiles
 
-> A portable Linux configuration that allows me to quickly recreate my preferred shell environment on any system.
+> A portable shell configuration that allows me to quickly recreate
+> my preferred environment on any system.
 
-These are my personal dotfiles for Linux. They grow as I tinker,
+These are my personal dotfiles for Linux and Windows. They grow as I tinker,
 and let me get my environment back up in minutes on any machine.
 
 ## Features
@@ -36,13 +37,20 @@ If `lsd` is not installed, basic fallback aliases are used for `ls`, `la`, `ll`,
 
 ## Installation
 
+**Linux:**
+
 ```bash
 git clone https://github.com/maldor0r/dotfiles && cd dotfiles && ./install.sh
 ```
 
-The installer auto-installs `lsd`, `ble.sh`, and `starship` (if missing), asks once for the
-lsd icon style, and wires `.bashrc` to the repo's `.bashrc_custom`. Existing `.bashrc` is
-backed up automatically.
+**Windows (PowerShell):**
+
+```powershell
+git clone https://github.com/maldor0r/dotfiles && cd dotfiles && .\install.ps1
+```
+
+The installer auto-installs missing tools, configures starship with the
+pastel-powerline preset, and wires up your shell profile.
 
 ## Configuration
 
