@@ -46,7 +46,7 @@ git clone https://github.com/maldor0r/dotfiles && cd dotfiles && ./install.sh
 **Windows (PowerShell):**
 
 ```powershell
-git clone https://github.com/maldor0r/dotfiles && cd dotfiles && .\install.ps1
+git clone https://github.com/maldor0r/dotfiles; cd dotfiles; .\install.ps1
 ```
 
 The installer auto-installs missing tools, configures starship with the
