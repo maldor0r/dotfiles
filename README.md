@@ -37,13 +37,13 @@ If `lsd` is not installed, basic fallback aliases are used for `ls`, `la`, `ll`,
 
 ## Installation
 
-**Bash:**
+**Linux (Bash):**
 
 ```bash
 git clone https://github.com/maldor0r/dotfiles && cd dotfiles && ./install.sh
 ```
 
-**PowerShell:**
+**Windows (PowerShell):**
 
 ```powershell
 git clone https://github.com/maldor0r/dotfiles && cd dotfiles && .\install.ps1
