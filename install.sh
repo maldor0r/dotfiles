@@ -50,9 +50,20 @@ if ! command -v lsd &> /dev/null; then
         fi
         $PKG_INSTALL lsd > /dev/null 2>&1
     fi
-    if command -v lsd &> /dev/null; then
-        echo "[OK] lsd installed."
-    else
+    if ! command -v lsd &> /dev/null; then
+        # Fallback: download musl binary from GitHub
+        echo "[INFO] Trying GitHub release..."
+        LSD_VERSION=$(curl -sL https://api.github.com/repos/lsd-rs/lsd/releases/latest | grep '"tag_name"' | cut -d'"' -f4 | tr -d 'v')
+        if [ -n "$LSD_VERSION" ] && command -v curl &> /dev/null; then
+            LSD_URL="https://github.com/lsd-rs/lsd/releases/latest/download/lsd-${LSD_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+            curl -sL "$LSD_URL" -o /tmp/lsd.tar.gz && \
+            tar xzf /tmp/lsd.tar.gz -C /tmp && \
+            sudo cp /tmp/lsd-${LSD_VERSION}-x86_64-unknown-linux-musl/lsd /usr/local/bin/ && \
+            rm -rf /tmp/lsd.tar.gz /tmp/lsd-${LSD_VERSION}-x86_64-unknown-linux-musl && \
+            echo "[OK] lsd installed."
+        fi
+    fi
+    if ! command -v lsd &> /dev/null; then
         echo "[WARN] Could not install lsd automatically."
         echo "       Install it manually from:"
         echo "         https://github.com/lsd-rs/lsd/releases"
