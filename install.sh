@@ -53,9 +53,9 @@ if ! command -v lsd &> /dev/null; then
     if ! command -v lsd &> /dev/null; then
         # Fallback: download musl binary from GitHub
         echo "[INFO] Trying GitHub release..."
-        LSD_VERSION=$(curl -sL https://api.github.com/repos/lsd-rs/lsd/releases/latest | grep '"tag_name"' | cut -d'"' -f4 | tr -d 'v')
+        LSD_VERSION=$(curl -sL https://api.github.com/repos/lsd-rs/lsd/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
         if [ -n "$LSD_VERSION" ] && command -v curl &> /dev/null; then
-            LSD_URL="https://github.com/lsd-rs/lsd/releases/latest/download/lsd-${LSD_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+            LSD_URL="https://github.com/lsd-rs/lsd/releases/download/${LSD_VERSION}/lsd-${LSD_VERSION}-x86_64-unknown-linux-musl.tar.gz"
             curl -sL "$LSD_URL" -o /tmp/lsd.tar.gz && \
             tar xzf /tmp/lsd.tar.gz -C /tmp && \
             sudo cp /tmp/lsd-${LSD_VERSION}-x86_64-unknown-linux-musl/lsd /usr/local/bin/ && \
