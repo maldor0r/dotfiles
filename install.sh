@@ -141,6 +141,12 @@ if command -v lsd &> /dev/null; then
     if [ -f "$LSD_CHOICE_FILE" ]; then
         # Re-apply previous choice silently
         ICON_CHOICE=$(cat "$LSD_CHOICE_FILE")
+        case "$ICON_CHOICE" in
+            1) echo "[OK] Using saved icon choice: fancy icons." ;;
+            2) echo "[OK] Using saved icon choice: unicode icons." ;;
+            3) echo "[OK] Using saved icon choice: no icons." ;;
+        esac
+        echo "     (delete ~/.config/lsd/.icon-choice to choose again)"
     else
         # Ask once
 
