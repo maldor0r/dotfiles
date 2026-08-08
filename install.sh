@@ -6,37 +6,24 @@ echo "========================================="
 echo
 
 echo "[INFO] Setting up your dotfiles..."
-echo "[INFO] This script uses sudo for package installations."
-echo "       You may be prompted for your password."
+
+# Install everything into the current user's own directory — no sudo needed.
+LOCAL_BIN="$HOME/.local/bin"
+mkdir -p "$LOCAL_BIN"
+
+# Make ~/.local/bin available on PATH (findable from any directory).
+case ":$PATH:" in
+    *":$LOCAL_BIN:"*) ;;
+    *) export PATH="$LOCAL_BIN:$PATH" ;;
+esac
+
+echo "[INFO] Installing tools into your own user directory: $LOCAL_BIN"
+echo "       No sudo or system-wide changes are required."
 echo
 
 DOTFILES_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 BASHRC_CUSTOM="$DOTFILES_DIR/.bashrc_custom"
 BASHRC_CUSTOM_ESCAPED=$(printf '%q' "$BASHRC_CUSTOM")
-
-# Detect package manager (used for lsd and make)
-if command -v dnf &> /dev/null; then
-    PKG_MANAGER="dnf"
-    PKG_INSTALL="sudo dnf install -y"
-elif command -v yum &> /dev/null; then
-    PKG_MANAGER="yum"
-    PKG_INSTALL="sudo yum install -y"
-elif command -v apt &> /dev/null; then
-    PKG_MANAGER="apt"
-    PKG_INSTALL="sudo apt install -y"
-elif command -v pacman &> /dev/null; then
-    PKG_MANAGER="pacman"
-    PKG_INSTALL="sudo pacman -S --noconfirm"
-elif command -v zypper &> /dev/null; then
-    PKG_MANAGER="zypper"
-    PKG_INSTALL="sudo zypper install -y"
-elif command -v apk &> /dev/null; then
-    PKG_MANAGER="apk"
-    PKG_INSTALL="sudo apk add"
-else
-    PKG_MANAGER=""
-    PKG_INSTALL=""
-fi
 
 # ----------------------------------------------------------
 # lsd
@@ -44,29 +31,29 @@ fi
 
 if ! command -v lsd &> /dev/null; then
     echo "[INFO] Installing lsd..."
-    if [ -n "$PKG_INSTALL" ]; then
-        if [ "$PKG_MANAGER" = "apt" ]; then
-            sudo apt update > /dev/null 2>&1
-        fi
-        $PKG_INSTALL lsd > /dev/null 2>&1
-    fi
-    if ! command -v lsd &> /dev/null; then
-        # Fallback: download musl binary from GitHub
-        echo "[INFO] Trying GitHub release..."
+    if command -v curl &> /dev/null; then
+        echo "[INFO] Fetching latest lsd version..."
         LSD_VERSION=$(curl -sL https://api.github.com/repos/lsd-rs/lsd/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
-        if [ -n "$LSD_VERSION" ] && command -v curl &> /dev/null; then
+        if [ -n "$LSD_VERSION" ]; then
             LSD_URL="https://github.com/lsd-rs/lsd/releases/download/${LSD_VERSION}/lsd-${LSD_VERSION}-x86_64-unknown-linux-musl.tar.gz"
-            curl -sL "$LSD_URL" -o /tmp/lsd.tar.gz && \
-            tar xzf /tmp/lsd.tar.gz -C /tmp && \
-            sudo cp /tmp/lsd-${LSD_VERSION}-x86_64-unknown-linux-musl/lsd /usr/local/bin/ && \
-            rm -rf /tmp/lsd.tar.gz /tmp/lsd-${LSD_VERSION}-x86_64-unknown-linux-musl && \
-            echo "[OK] lsd installed."
+            echo "[INFO] Downloading lsd ${LSD_VERSION}..."
+            if curl -sL "$LSD_URL" -o /tmp/lsd.tar.gz && \
+               tar xzf /tmp/lsd.tar.gz -C /tmp && \
+               install -m 755 "/tmp/lsd-${LSD_VERSION}-x86_64-unknown-linux-musl/lsd" "$LOCAL_BIN/lsd" && \
+               rm -rf /tmp/lsd.tar.gz "/tmp/lsd-${LSD_VERSION}-x86_64-unknown-linux-musl"; then
+                echo "[OK] lsd installed to $LOCAL_BIN."
+            else
+                echo "[WARN] Could not install lsd automatically."
+            fi
+        else
+            echo "[WARN] Could not determine the latest lsd version."
         fi
+    else
+        echo "[WARN] curl is required to install lsd."
     fi
     if ! command -v lsd &> /dev/null; then
-        echo "[WARN] Could not install lsd automatically."
-        echo "       Install it manually from:"
-        echo "         https://github.com/lsd-rs/lsd/releases"
+        echo "[WARN] Could not install lsd. Install it manually from:"
+        echo "       https://github.com/lsd-rs/lsd/releases"
     fi
 fi
 
@@ -78,33 +65,55 @@ BLESH_DIR="$HOME/.local/share/blesh"
 
 if ! [ -f "$BLESH_DIR/ble.sh" ]; then
     echo "[INFO] Installing ble.sh (Bash Line Editor)..."
-    if command -v git &> /dev/null; then
-        if ! command -v make &> /dev/null; then
-            echo "[INFO] Installing make..."
-            if [ -n "$PKG_INSTALL" ]; then
-                $PKG_INSTALL make > /dev/null 2>&1
-            fi
-        fi
-        if command -v make &> /dev/null; then
-            echo "[INFO] Building ble.sh from GitHub..."
-            git clone --recursive --depth 1 --shallow-submodules \
-                https://github.com/akinomyoga/ble.sh.git /tmp/ble.sh \
-                > /dev/null 2>&1
-            if make -C /tmp/ble.sh install PREFIX="$HOME/.local" > /dev/null 2>&1; then
-                rm -rf /tmp/ble.sh
-                echo "[OK] ble.sh installed."
-            else
-                echo "[WARN] ble.sh installation failed."
-                echo "       You can install it manually later from:"
-                echo "         https://github.com/akinomyoga/ble.sh"
-            fi
-        else
-            echo "[WARN] make is required to build ble.sh."
-            echo "       Install it manually, then re-run this script."
-        fi
-    else
+
+    # ble.sh must be compiled with make, which may not be present.
+    # This is the one optional step that needs sudo, so we ask first.
+    if ! command -v git &> /dev/null; then
         echo "[WARN] git is required to install ble.sh."
         echo "       Install it manually, then re-run this script."
+    elif ! command -v make &> /dev/null; then
+        echo "[WARN] make is required to build ble.sh, but it is not installed."
+        echo -n "       Install make now? (system-wide, needs sudo) [y/N] "
+        read -r INSTALL_MAKE
+        case "${INSTALL_MAKE:-n}" in
+            y|Y|yes|Yes|YES)
+                echo "[INFO] Installing make with sudo..."
+                if command -v apt &> /dev/null; then
+                    sudo apt install -y make > /dev/null 2>&1
+                elif command -v dnf &> /dev/null; then
+                    sudo dnf install -y make > /dev/null 2>&1
+                elif command -v yum &> /dev/null; then
+                    sudo yum install -y make > /dev/null 2>&1
+                elif command -v pacman &> /dev/null; then
+                    sudo pacman -S --noconfirm make > /dev/null 2>&1
+                elif command -v zypper &> /dev/null; then
+                    sudo zypper install -y make > /dev/null 2>&1
+                elif command -v apk &> /dev/null; then
+                    sudo apk add make > /dev/null 2>&1
+                else
+                    echo "[WARN] Unrecognized package manager."
+                    echo "       Install make manually, then re-run this script."
+                fi
+                ;;
+            *)
+                echo "[INFO] Skipping ble.sh. Install make yourself, then re-run."
+                ;;
+        esac
+    fi
+
+    if command -v make &> /dev/null; then
+        echo "[INFO] Building ble.sh from GitHub..."
+        git clone --recursive --depth 1 --shallow-submodules \
+            https://github.com/akinomyoga/ble.sh.git /tmp/ble.sh \
+            > /dev/null 2>&1
+        if make -C /tmp/ble.sh install PREFIX="$HOME/.local" > /dev/null 2>&1; then
+            rm -rf /tmp/ble.sh
+            echo "[OK] ble.sh installed."
+        else
+            echo "[WARN] ble.sh installation failed."
+            echo "       You can install it manually later from:"
+            echo "         https://github.com/akinomyoga/ble.sh"
+        fi
     fi
 fi
 
@@ -115,8 +124,8 @@ fi
 if ! command -v starship &> /dev/null; then
     echo "[INFO] Installing starship..."
     if command -v curl &> /dev/null; then
-        if curl -sS https://starship.rs/install.sh | sudo sh -s -- -y > /dev/null 2>&1; then
-            echo "[OK] starship installed."
+        if curl -sS https://starship.rs/install.sh | sh -s -- -y --bin-dir "$LOCAL_BIN" > /dev/null 2>&1; then
+            echo "[OK] starship installed to $LOCAL_BIN."
         else
             echo "[WARN] starship installation failed."
             echo "       You can install it manually later from:"
@@ -170,7 +179,8 @@ if command -v lsd &> /dev/null; then
 
     case "$ICON_CHOICE" in
         1)
-            rm -f "$HOME/.config/lsd/config.yaml"
+            mkdir -p "$HOME/.config/lsd"
+            cp "$DOTFILES_DIR/config/lsd/config-fancy.yaml" "$HOME/.config/lsd/config.yaml"
             echo "[OK] Using fancy Nerd Font icons."
             ;;
         2)
@@ -186,7 +196,8 @@ if command -v lsd &> /dev/null; then
         *)
             echo "[WARN] Invalid choice. Using default."
             if $NERD_FOUND; then
-                rm -f "$HOME/.config/lsd/config.yaml"
+                mkdir -p "$HOME/.config/lsd"
+                cp "$DOTFILES_DIR/config/lsd/config-fancy.yaml" "$HOME/.config/lsd/config.yaml"
                 echo "[OK] Using fancy Nerd Font icons."
             else
                 mkdir -p "$HOME/.config/lsd"

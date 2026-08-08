@@ -90,7 +90,7 @@ Remove-Item Alias:ls -ErrorAction SilentlyContinue
 
 function ls { lsd --group-directories-first @Args }
 function ll { lsd -l --group-directories-first @Args }
-function la { lsd -la --group-directories-first @Args }
+function la { lsd -a --group-directories-first @Args }
 function lla { lsd -la --group-directories-first @Args }
 function lt { lsd --tree --depth 3 @Args }
 function lta { lsd -a --tree --depth 3 @Args }

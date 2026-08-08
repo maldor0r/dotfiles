@@ -12,7 +12,6 @@ and let me get my environment back up in minutes on any machine.
 - `lsd` aliases with icon configuration
 - `ble.sh` (Bash Line Editor) with syntax highlighting and autocomplete
 - **starship** prompt with pastel-powerline preset
-- Git version control
 - Safe installation with automatic backups
 
 <details>
@@ -50,7 +49,19 @@ git clone https://github.com/maldor0r/dotfiles; cd dotfiles; .\install.ps1
 ```
 
 The installer auto-installs missing tools, configures starship with the
-pastel-powerline preset, and wires up your shell profile.
+pastel-powerline preset, and wires up your shell profile — **all without
+`sudo`**.
+
+> **How it works:** tools are installed into your own user directory
+> (`~/.local/bin`) so no admin/root access is required. This works even
+> on fresh WSL distros or cloud VMs where you don't have (or don't want
+> to grant) sudo rights. Downside: updates are manual — re-run the
+> installer to fetch new versions. `~/.local/bin` is added to your
+> `$PATH` automatically.
+>
+> **One optional sudo step:** installing `ble.sh` requires the `make`
+> build tool. If `make` is missing, the installer will ask whether to
+> install it with sudo — it will never use sudo without your consent.
 
 ## Configuration
 
