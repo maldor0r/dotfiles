@@ -62,8 +62,11 @@ fi
 # ----------------------------------------------------------
 
 BLESH_DIR="$HOME/.local/share/blesh"
+BLESH_PRESENT=false
 
-if ! [ -f "$BLESH_DIR/ble.sh" ]; then
+if [ -f "$BLESH_DIR/ble.sh" ]; then
+    BLESH_PRESENT=true
+else
     echo "[INFO] Installing ble.sh (Bash Line Editor)..."
 
     # ble.sh must be compiled with make, which may not be present.
@@ -108,6 +111,7 @@ if ! [ -f "$BLESH_DIR/ble.sh" ]; then
             > /dev/null 2>&1
         if make -C /tmp/ble.sh install PREFIX="$HOME/.local" > /dev/null 2>&1; then
             rm -rf /tmp/ble.sh
+            BLESH_PRESENT=true
             echo "[OK] ble.sh installed."
         else
             echo "[WARN] ble.sh installation failed."
@@ -225,23 +229,35 @@ fi
 # Shell setup
 # ----------------------------------------------------------
 
-TIMESTAMP=$(date +%Y%m%d-%H%M)
-
 echo "[INFO] Setting up ~/.bashrc..."
 
-if [ -f "$HOME/.bashrc" ]; then
-    echo "[OK] Existing .bashrc found."
-    # Create backup before any modifications
-    cp "$HOME/.bashrc" "$HOME/.bashrc.backup.${TIMESTAMP}"
-    echo "[OK] Backup created: $HOME/.bashrc.backup.${TIMESTAMP}"
-else
-    echo "[INFO] No existing .bashrc found."
-    touch "$HOME/.bashrc"
-    echo "[OK] Created new .bashrc."
+# Only back up ~/.bashrc when we're actually going to modify it, so
+# re-running the installer doesn't pile up no-op backups.
+ADD_BLESH=false
+if [ "$BLESH_PRESENT" = true ] && ! grep -Fq "blesh/ble.sh" "$HOME/.bashrc" 2>/dev/null; then
+    ADD_BLESH=true
+fi
+
+ADD_DOTFILES=false
+if ! grep -Fq "source ${BASHRC_CUSTOM_ESCAPED}" "$HOME/.bashrc" 2>/dev/null; then
+    ADD_DOTFILES=true
+fi
+
+if [ "$ADD_BLESH" = true ] || [ "$ADD_DOTFILES" = true ]; then
+    TIMESTAMP=$(date +%Y%m%d-%H%M)
+    if [ -f "$HOME/.bashrc" ]; then
+        echo "[OK] Existing .bashrc found."
+        cp "$HOME/.bashrc" "$HOME/.bashrc.backup.${TIMESTAMP}"
+        echo "[OK] Backup created: $HOME/.bashrc.backup.${TIMESTAMP}"
+    else
+        echo "[INFO] No existing .bashrc found."
+        touch "$HOME/.bashrc"
+        echo "[OK] Created new .bashrc."
+    fi
 fi
 
 # Add ble.sh source if installed
-if [ -f "$BLESH_DIR/ble.sh" ] && ! grep -Fq "blesh/ble.sh" "$HOME/.bashrc"; then
+if [ "$ADD_BLESH" = true ]; then
     echo
     echo "[INFO] Adding ble.sh to ~/.bashrc..."
     {
@@ -255,9 +271,7 @@ fi
 echo
 echo "[INFO] Checking if dotfiles are already configured..."
 
-if grep -Fq "source ${BASHRC_CUSTOM_ESCAPED}" "$HOME/.bashrc"; then
-    echo "[OK] Dotfiles are already configured."
-else
+if [ "$ADD_DOTFILES" = true ]; then
     echo "[INFO] Adding dotfiles configuration..."
     {
         echo
@@ -267,6 +281,8 @@ else
         echo "fi"
     } >> "$HOME/.bashrc"
     echo "[OK] Configuration added."
+else
+    echo "[OK] Dotfiles are already configured."
 fi
 
 echo
@@ -280,7 +296,7 @@ if command -v lsd &> /dev/null; then
 else
     echo "  ⚠️  lsd not installed — using basic ls aliases"
 fi
-if [ -f "$BLESH_DIR/ble.sh" ]; then
+if [ "$BLESH_PRESENT" = true ]; then
     echo "  ✅ ble.sh ready"
 fi
 if command -v starship &> /dev/null; then
