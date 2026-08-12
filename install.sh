@@ -34,17 +34,29 @@ if ! command -v lsd &> /dev/null; then
     if command -v curl &> /dev/null; then
         echo "[INFO] Fetching latest lsd version..."
         LSD_VERSION=$(curl -sL https://api.github.com/repos/lsd-rs/lsd/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
-        if [ -n "$LSD_VERSION" ]; then
-            LSD_URL="https://github.com/lsd-rs/lsd/releases/download/${LSD_VERSION}/lsd-${LSD_VERSION}-x86_64-unknown-linux-musl.tar.gz"
-            echo "[INFO] Downloading lsd ${LSD_VERSION}..."
+        # Map the machine's CPU architecture to lsd's release asset names.
+        # 64-bit Intel/ARM use the static musl builds; 32-bit ARM only ships gnu.
+        case "$(uname -m)" in
+            x86_64|amd64)        LSD_ARCH="x86_64-unknown-linux-musl" ;;
+            aarch64|arm64)       LSD_ARCH="aarch64-unknown-linux-musl" ;;
+            armv7*|armv6*|arm)   LSD_ARCH="arm-unknown-linux-gnueabihf" ;;
+            i686|i386|x86)       LSD_ARCH="i686-unknown-linux-musl" ;;
+            *)                   LSD_ARCH="" ;;
+        esac
+        if [ -n "$LSD_VERSION" ] && [ -n "$LSD_ARCH" ]; then
+            LSD_URL="https://github.com/lsd-rs/lsd/releases/download/${LSD_VERSION}/lsd-${LSD_VERSION}-${LSD_ARCH}.tar.gz"
+            echo "[INFO] Downloading lsd ${LSD_VERSION} (${LSD_ARCH})..."
             if curl -sL "$LSD_URL" -o /tmp/lsd.tar.gz && \
                tar xzf /tmp/lsd.tar.gz -C /tmp && \
-               install -m 755 "/tmp/lsd-${LSD_VERSION}-x86_64-unknown-linux-musl/lsd" "$LOCAL_BIN/lsd" && \
-               rm -rf /tmp/lsd.tar.gz "/tmp/lsd-${LSD_VERSION}-x86_64-unknown-linux-musl"; then
+               install -m 755 "/tmp/lsd-${LSD_VERSION}-${LSD_ARCH}/lsd" "$LOCAL_BIN/lsd" && \
+               rm -rf /tmp/lsd.tar.gz "/tmp/lsd-${LSD_VERSION}-${LSD_ARCH}"; then
                 echo "[OK] lsd installed to $LOCAL_BIN."
             else
                 echo "[WARN] Could not install lsd automatically."
             fi
+        elif [ -z "$LSD_ARCH" ]; then
+            echo "[WARN] Unsupported architecture '$(uname -m)' — cannot download lsd."
+            echo "       Install it manually from: https://github.com/lsd-rs/lsd/releases"
         else
             echo "[WARN] Could not determine the latest lsd version."
         fi
@@ -82,7 +94,10 @@ else
             y|Y|yes|Yes|YES)
                 echo "[INFO] Installing build dependencies with sudo..."
                 if command -v apt &> /dev/null; then
-                    sudo apt install -y make gawk > /dev/null 2>&1
+                    # Fresh minimal Debian/Ubuntu images may have empty package
+                    # lists; refresh them first or `apt install` can fail.
+                    sudo apt-get update > /dev/null 2>&1
+                    sudo apt-get install -y make gawk > /dev/null 2>&1
                 elif command -v dnf &> /dev/null; then
                     sudo dnf install -y make gawk > /dev/null 2>&1
                 elif command -v yum &> /dev/null; then
