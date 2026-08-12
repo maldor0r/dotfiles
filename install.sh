@@ -106,16 +106,21 @@ else
 
     if command -v make &> /dev/null; then
         echo "[INFO] Building ble.sh from GitHub..."
-        git clone --recursive --depth 1 --shallow-submodules \
+        # Remove any leftover copy so a stale/partial clone can't block us.
+        rm -rf /tmp/ble.sh
+        if git clone --recursive --depth 1 --shallow-submodules \
             https://github.com/akinomyoga/ble.sh.git /tmp/ble.sh \
-            > /dev/null 2>&1
-        if make -C /tmp/ble.sh install PREFIX="$HOME/.local" > /dev/null 2>&1; then
+            > /dev/null 2>&1; then
+            if make -C /tmp/ble.sh install PREFIX="$HOME/.local" > /dev/null 2>&1; then
+                BLESH_PRESENT=true
+                echo "[OK] ble.sh installed."
+            else
+                echo "[WARN] ble.sh installation failed during 'make install'."
+            fi
             rm -rf /tmp/ble.sh
-            BLESH_PRESENT=true
-            echo "[OK] ble.sh installed."
         else
-            echo "[WARN] ble.sh installation failed."
-            echo "       You can install it manually later from:"
+            echo "[WARN] ble.sh installation failed: could not clone the repository."
+            echo "       Install it manually later from:"
             echo "         https://github.com/akinomyoga/ble.sh"
         fi
     fi
