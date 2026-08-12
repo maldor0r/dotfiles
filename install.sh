@@ -69,37 +69,37 @@ if [ -f "$BLESH_DIR/ble.sh" ]; then
 else
     echo "[INFO] Installing ble.sh (Bash Line Editor)..."
 
-    # ble.sh must be compiled with make, which may not be present.
+    # ble.sh must be compiled with make and gawk, which may not be present.
     # This is the one optional step that needs sudo, so we ask first.
     if ! command -v git &> /dev/null; then
         echo "[WARN] git is required to install ble.sh."
         echo "       Install it manually, then re-run this script."
-    elif ! command -v make &> /dev/null; then
-        echo "[WARN] make is required to build ble.sh, but it is not installed."
-        echo -n "       Install make now? (system-wide, needs sudo) [y/N] "
-        read -r INSTALL_MAKE
-        case "${INSTALL_MAKE:-n}" in
+    elif ! command -v make &> /dev/null || ! command -v gawk &> /dev/null; then
+        echo "[WARN] make and/or gawk are required to build ble.sh but are not installed."
+        echo -n "       Install them now? (system-wide, needs sudo) [y/N] "
+        read -r INSTALL_DEPS
+        case "${INSTALL_DEPS:-n}" in
             y|Y|yes|Yes|YES)
-                echo "[INFO] Installing make with sudo..."
+                echo "[INFO] Installing build dependencies with sudo..."
                 if command -v apt &> /dev/null; then
-                    sudo apt install -y make > /dev/null 2>&1
+                    sudo apt install -y make gawk > /dev/null 2>&1
                 elif command -v dnf &> /dev/null; then
-                    sudo dnf install -y make > /dev/null 2>&1
+                    sudo dnf install -y make gawk > /dev/null 2>&1
                 elif command -v yum &> /dev/null; then
-                    sudo yum install -y make > /dev/null 2>&1
+                    sudo yum install -y make gawk > /dev/null 2>&1
                 elif command -v pacman &> /dev/null; then
-                    sudo pacman -S --noconfirm make > /dev/null 2>&1
+                    sudo pacman -S --noconfirm make gawk > /dev/null 2>&1
                 elif command -v zypper &> /dev/null; then
-                    sudo zypper install -y make > /dev/null 2>&1
+                    sudo zypper install -y make gawk > /dev/null 2>&1
                 elif command -v apk &> /dev/null; then
-                    sudo apk add make > /dev/null 2>&1
+                    sudo apk add make gawk > /dev/null 2>&1
                 else
                     echo "[WARN] Unrecognized package manager."
-                    echo "       Install make manually, then re-run this script."
+                    echo "       Install make and gawk manually, then re-run this script."
                 fi
                 ;;
             *)
-                echo "[INFO] Skipping ble.sh. Install make yourself, then re-run."
+                echo "[INFO] Skipping ble.sh. Install make and gawk yourself, then re-run."
                 ;;
         esac
     fi
