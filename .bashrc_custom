@@ -5,6 +5,20 @@
 # ==========================================================
 
 # ----------------------------------------------------------
+# Termux / minimal shells: ensure USER is set (ble.sh requires it)
+# ----------------------------------------------------------
+
+if [ -z "${USER:-}" ] && command -v id &> /dev/null; then
+    export USER="$(id -un)"
+fi
+
+# ble.sh warns when the locale is the degenerate "C" locale (common on
+# Termux). NOTE: setting LANG only helps if that locale is actually
+# installed; the robust fix is `pkg install -y libandroid-support` plus
+# generating the locale. So here we only ensure a locale is picked when
+# one is unset and looks installed — otherwise leave it alone.
+
+# ----------------------------------------------------------
 # User-local binaries (~/.local/bin) on PATH
 # ----------------------------------------------------------
 
