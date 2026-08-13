@@ -7,6 +7,14 @@ echo
 
 echo "[INFO] Setting up your dotfiles..."
 
+# Detect Termux (Android userland): it defines $PREFIX and ships `pkg`,
+# a no-sudo package manager, so login shells don't use sudo.
+if [ -n "$PREFIX" ] && command -v pkg &> /dev/null; then
+    IS_TERMUX=1
+else
+    IS_TERMUX=0
+fi
+
 # Install everything into the current user's own directory — no sudo needed.
 LOCAL_BIN="$HOME/.local/bin"
 mkdir -p "$LOCAL_BIN"
@@ -82,41 +90,47 @@ else
     echo "[INFO] Installing ble.sh (Bash Line Editor)..."
 
     # ble.sh must be compiled with make and gawk, which may not be present.
-    # This is the one optional step that needs sudo, so we ask first.
+    # On normal Linux this needs sudo; on Termux packages install user-local
+    # via `pkg`, so no sudo is required.
     if ! command -v git &> /dev/null; then
         echo "[WARN] git is required to install ble.sh."
         echo "       Install it manually, then re-run this script."
     elif ! command -v make &> /dev/null || ! command -v gawk &> /dev/null; then
-        echo "[WARN] make and/or gawk are required to build ble.sh but are not installed."
-        echo -n "       Install them now? (system-wide, needs sudo) [y/N] "
-        read -r INSTALL_DEPS
-        case "${INSTALL_DEPS:-n}" in
-            y|Y|yes|Yes|YES)
-                echo "[INFO] Installing build dependencies with sudo..."
-                if command -v apt &> /dev/null; then
-                    # Fresh minimal Debian/Ubuntu images may have empty package
-                    # lists; refresh them first or `apt install` can fail.
-                    sudo apt-get update > /dev/null 2>&1
-                    sudo apt-get install -y make gawk > /dev/null 2>&1
-                elif command -v dnf &> /dev/null; then
-                    sudo dnf install -y make gawk > /dev/null 2>&1
-                elif command -v yum &> /dev/null; then
-                    sudo yum install -y make gawk > /dev/null 2>&1
-                elif command -v pacman &> /dev/null; then
-                    sudo pacman -S --noconfirm make gawk > /dev/null 2>&1
-                elif command -v zypper &> /dev/null; then
-                    sudo zypper install -y make gawk > /dev/null 2>&1
-                elif command -v apk &> /dev/null; then
-                    sudo apk add make gawk > /dev/null 2>&1
-                else
-                    echo "[WARN] Unrecognized package manager."
-                    echo "       Install make and gawk manually, then re-run this script."
-                fi
-                ;;
-            *)
-                echo "[INFO] Skipping ble.sh. Install make and gawk yourself, then re-run."
-                ;;
-        esac
+        if [ "$IS_TERMUX" = "1" ]; then
+            echo "[INFO] Installing make and gawk with pkg (no sudo needed)..."
+            pkg install -y make gawk > /dev/null 2>&1
+        else
+            echo "[WARN] make and/or gawk are required to build ble.sh but are not installed."
+            echo -n "       Install them now? (system-wide, needs sudo) [y/N] "
+            read -r INSTALL_DEPS
+            case "${INSTALL_DEPS:-n}" in
+                y|Y|yes|Yes|YES)
+                    echo "[INFO] Installing build dependencies with sudo..."
+                    if command -v apt &> /dev/null; then
+                        # Fresh minimal Debian/Ubuntu images may have empty package
+                        # lists; refresh them first or `apt install` can fail.
+                        sudo apt-get update > /dev/null 2>&1
+                        sudo apt-get install -y make gawk > /dev/null 2>&1
+                    elif command -v dnf &> /dev/null; then
+                        sudo dnf install -y make gawk > /dev/null 2>&1
+                    elif command -v yum &> /dev/null; then
+                        sudo yum install -y make gawk > /dev/null 2>&1
+                    elif command -v pacman &> /dev/null; then
+                        sudo pacman -S --noconfirm make gawk > /dev/null 2>&1
+                    elif command -v zypper &> /dev/null; then
+                        sudo zypper install -y make gawk > /dev/null 2>&1
+                    elif command -v apk &> /dev/null; then
+                        sudo apk add make gawk > /dev/null 2>&1
+                    else
+                        echo "[WARN] Unrecognized package manager."
+                        echo "       Install make and gawk manually, then re-run this script."
+                    fi
+                    ;;
+                *)
+                    echo "[INFO] Skipping ble.sh. Install make and gawk yourself, then re-run."
+                    ;;
+            esac
+        fi
     fi
 
     if command -v make &> /dev/null; then
