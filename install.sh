@@ -39,7 +39,16 @@ BASHRC_CUSTOM_ESCAPED=$(printf '%q' "$BASHRC_CUSTOM")
 
 if ! command -v lsd &> /dev/null; then
     echo "[INFO] Installing lsd..."
-    if command -v curl &> /dev/null; then
+    if [ "$IS_TERMUX" = "1" ]; then
+        # Termux uses Android's bionic libc, so GitHub musl/glibc binaries
+        # won't run. Install the Termux-native package instead.
+        if command -v pkg &> /dev/null; then
+            echo "[INFO] Installing lsd with pkg (Termux-native build)..."
+            pkg install -y lsd > /dev/null 2>&1
+        else
+            echo "[WARN] pkg not found — install lsd manually: pkg install lsd"
+        fi
+    elif command -v curl &> /dev/null; then
         echo "[INFO] Fetching latest lsd version..."
         LSD_VERSION=$(curl -sL https://api.github.com/repos/lsd-rs/lsd/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
         # Map the machine's CPU architecture to lsd's release asset names.
@@ -83,6 +92,13 @@ fi
 
 BLESH_DIR="$HOME/.local/share/blesh"
 BLESH_PRESENT=false
+
+# Termux may not have /tmp; use a temp dir inside the user's home there.
+if [ "$IS_TERMUX" = "1" ]; then
+    BLESH_TMP="$HOME/.cache/blesh-build"
+else
+    BLESH_TMP="/tmp/ble.sh"
+fi
 
 if [ -f "$BLESH_DIR/ble.sh" ]; then
     BLESH_PRESENT=true
@@ -136,17 +152,17 @@ else
     if command -v make &> /dev/null; then
         echo "[INFO] Building ble.sh from GitHub..."
         # Remove any leftover copy so a stale/partial clone can't block us.
-        rm -rf /tmp/ble.sh
+        rm -rf "$BLESH_TMP"
         if git clone --recursive --depth 1 --shallow-submodules \
-            https://github.com/akinomyoga/ble.sh.git /tmp/ble.sh \
+            https://github.com/akinomyoga/ble.sh.git "$BLESH_TMP" \
             > /dev/null 2>&1; then
-            if make -C /tmp/ble.sh install PREFIX="$HOME/.local" > /dev/null 2>&1; then
+            if make -C "$BLESH_TMP" install PREFIX="$HOME/.local" > /dev/null 2>&1; then
                 BLESH_PRESENT=true
                 echo "[OK] ble.sh installed."
             else
                 echo "[WARN] ble.sh installation failed during 'make install'."
             fi
-            rm -rf /tmp/ble.sh
+            rm -rf "$BLESH_TMP"
         else
             echo "[WARN] ble.sh installation failed: could not clone the repository."
             echo "       Install it manually later from:"
