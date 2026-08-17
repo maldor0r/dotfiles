@@ -3,6 +3,10 @@
 #  Author: maldor0r
 # =========================================================
 
+param(
+    [switch]$WithNerdFont  # download & install JetBrainsMono Nerd Font on Windows
+)
+
 $ErrorActionPreference = "Stop"
 
 Write-Host "========================================="
@@ -62,6 +66,85 @@ if (Get-Command starship -ErrorAction SilentlyContinue) {
     Copy-Item (Join-Path $DOTFILES_DIR "config\starship\starship.toml") (Join-Path $configDir "starship.toml") -Force
     Write-Host "[OK] starship configuration applied."
     Write-Host ""
+}
+
+# ----------------------------------------------------------
+# Nerd Font (optional, opt-in via -WithNerdFont)
+# ----------------------------------------------------------
+
+function Test-NerdFont {
+    # A Nerd Font is present if the installed-font collection lists a
+    # family matching "Nerd" or " NF" (e.g. "JetBrainsMono Nerd Font").
+    try {
+        $fonts = New-Object System.Drawing.Text.InstalledFontCollection
+        foreach ($family in $fonts.Families) {
+            if ($family.Name -match "Nerd| NF") { return $true }
+        }
+    } catch { }
+    return $false
+}
+
+$nerdFontPresent = Test-NerdFont
+
+if ($WithNerdFont -and -not $nerdFontPresent) {
+    Write-Host "[INFO] Installing JetBrainsMono Nerd Font..."
+    $installed = $false
+
+    # Preferred: winget package. (Verify the exact ID on first Windows run.)
+    if (Get-Command winget -ErrorAction SilentlyContinue) {
+        winget install --id DEVCOM.JetBrainsMonoNerdFont --accept-source-agreements --accept-package-agreements --silent 2>$null
+        $installed = Test-NerdFont
+    }
+
+    # Fallback: download the release zip and register the fonts per-user.
+    if (-not $installed) {
+        try {
+            $fontDir = Join-Path $env:LOCALAPPDATA "Microsoft\Windows\Fonts"
+            $tmp = Join-Path $env:TEMP "jetbrainsmono-nerd.zip"
+            $extract = Join-Path $fontDir "jetbrainsmono"
+            New-Item -ItemType Directory -Force -Path $fontDir | Out-Null
+            Write-Host "      Downloading JetBrainsMono Nerd Font..."
+            Invoke-WebRequest -Uri "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip" -OutFile $tmp -UseBasicParsing
+            New-Item -ItemType Directory -Force -Path $extract | Out-Null
+            Expand-Archive -LiteralPath $tmp -DestinationPath $extract -Force
+            Remove-Item $tmp -Force
+
+            Add-Type -Namespace Win32 -Name Font -MemberDefinition '[DllImport("gdi32.dll")] public static extern int AddFontResource(string file);'
+
+            $fontFiles = Get-ChildItem $extract -Recurse | Where-Object { $_.Extension -in ".ttf", ".otf" }
+            $fontsReg = "HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts"
+            New-Item -Path $fontsReg -Force | Out-Null
+            foreach ($f in $fontFiles) {
+                [Win32.Font]::AddFontResource($f.FullName) | Out-Null
+                New-ItemProperty -Path $fontsReg -Name $f.BaseName -PropertyType String -Value $f.Name -Force | Out-Null
+            }
+            $installed = Test-NerdFont
+        } catch {
+            Write-Warning "Could not install the Nerd Font automatically. Install it manually from https://www.nerdfonts.com/ and restart Windows Terminal."
+        }
+    }
+
+    $nerdFontPresent = Test-NerdFont
+    if ($nerdFontPresent) {
+        Write-Host "[OK] Nerd Font installed. Restart Windows Terminal to use it."
+    }
+} elseif (-not $nerdFontPresent) {
+    Write-Host "[INFO] No Nerd Font detected. ls will use plain icons."
+    Write-Host "       Install one on Windows (e.g. winget install --id DEVCOM.JetBrainsMonoNerdFont)"
+    Write-Host "       and re-run with -WithNerdFont for fancy lsd icons."
+}
+
+# Configure lsd icons to match the detected font.
+if (Get-Command lsd -ErrorAction SilentlyContinue) {
+    $lsdConfigDir = Join-Path $env:USERPROFILE ".config\lsd"
+    New-Item -ItemType Directory -Force -Path $lsdConfigDir | Out-Null
+    if ($nerdFontPresent) {
+        Copy-Item (Join-Path $DOTFILES_DIR "config\lsd\config-fancy.yaml") (Join-Path $lsdConfigDir "config.yaml") -Force
+        Write-Host "[OK] lsd configured with fancy Nerd Font icons."
+    } else {
+        Copy-Item (Join-Path $DOTFILES_DIR "config\lsd\config-no-icons.yaml") (Join-Path $lsdConfigDir "config.yaml") -Force
+        Write-Host "[OK] lsd configured with icons disabled."
+    }
 }
 
 # ----------------------------------------------------------

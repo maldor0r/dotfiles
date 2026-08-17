@@ -55,14 +55,27 @@ pastel-powerline preset, and wires up your shell profile — **all without
 **Installer options (Linux):**
 
 ```bash
-./install.sh -y             # assume yes: auto-install optional build deps,
-                            # pick the default icon style — no prompts
-./install.sh --skip-blesh   # skip building/installing ble.sh
-./install.sh -h             # show help
+./install.sh -y                # assume yes: auto-install optional build deps,
+                               # pick the default icon style — no prompts
+./install.sh --skip-blesh      # skip building/installing ble.sh
+./install.sh --with-nerd-font  # install JetBrainsMono Nerd Font (Linux only)
+./install.sh -h                # show help
 ```
 
 Non-interactive runs (no TTY, e.g. CI) automatically use defaults for the
 icon-style and `ble.sh` dependency prompts instead of blocking.
+
+**Windows (PowerShell) Nerd Font:**
+
+```powershell
+.\install.ps1 -WithNerdFont   # install JetBrainsMono Nerd Font on Windows
+```
+
+**Nerd Fonts:** icon support needs a Nerd Font. On native Linux the installer
+can install one for you (`--with-nerd-font`); under WSL a font must be
+installed on the **Windows** side — installing it inside Linux is invisible to
+the Windows terminal. The installer detects Nerd Fonts (including Windows-host
+fonts, via `/mnt/c`) and picks the icon style automatically.
 
 > **How it works:** tools are installed into your own user directory
 > (`~/.local/bin`) so no admin/root access is required. This works even

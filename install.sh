@@ -2,13 +2,16 @@
 
 # ----------------------------------------------------------
 # Argument handling
-#   -y / --yes        : assume yes to prompts (install optional
-#                       build deps with sudo, pick default icons)
-#   --skip-blesh      : never build/install ble.sh
-#   -h / --help       : show usage
+#   -y / --yes          : assume yes to prompts (install optional
+#                         build deps with sudo, pick default icons)
+#   --skip-blesh        : never build/install ble.sh
+#   --with-nerd-font    : download & install JetBrainsMono Nerd Font
+#                         (native Linux only; WSL users get instructions)
+#   -h / --help         : show usage
 # ----------------------------------------------------------
 ASSUME_YES=0
 SKIP_BLESH=0
+WITH_NERD_FONT=0
 
 usage() {
     echo "Usage: $0 [OPTIONS]"
@@ -17,6 +20,9 @@ usage() {
     echo "  -y, --yes        Assume yes to prompts (install optional"
     echo "                   build deps with sudo, use default icon style)."
     echo "  --skip-blesh     Never build/install ble.sh."
+    echo "  --with-nerd-font Download & install JetBrainsMono Nerd Font"
+    echo "                   into ~/.local/share/fonts (native Linux only)."
+    echo "                   On WSL the font must be installed on Windows."
     echo "  -h, --help       Show this help and exit."
 }
 
@@ -24,6 +30,7 @@ while [ $# -gt 0 ]; do
     case "$1" in
         -y|--yes)  ASSUME_YES=1 ;;
         --skip-blesh) SKIP_BLESH=1 ;;
+        --with-nerd-font) WITH_NERD_FONT=1 ;;
         -h|--help) usage; exit 0 ;;
         *) echo "[WARN] Unknown option: $1" ;;
     esac
@@ -51,6 +58,15 @@ if [ -n "$PREFIX" ] && command -v pkg &> /dev/null; then
     IS_TERMUX=1
 else
     IS_TERMUX=0
+fi
+
+# Detect WSL (Windows Subsystem for Linux): exposes /mnt/c and runs on a
+# Windows terminal host, so Linux-side font installs are invisible to the
+# terminal. Detected via the WSL-specific env var or the kernel banner.
+if [ -n "${WSL_DISTRO_NAME:-}" ] || grep -qiE "microsoft|wsl" /proc/version 2>/dev/null; then
+    IS_WSL=1
+else
+    IS_WSL=0
 fi
 
 # Install everything into the current user's own directory — no sudo needed.
@@ -273,6 +289,73 @@ if ! command -v starship &> /dev/null; then
 fi
 
 # ----------------------------------------------------------
+# Nerd Font (optional, opt-in)
+# ----------------------------------------------------------
+
+# Install JetBrainsMono Nerd Font into the user's own font dir (no sudo).
+# On WSL this is a no-op that only prints instructions: a font installed
+# inside Linux is invisible to the Windows terminal.
+install_nerd_font() {
+    local fonttmp
+    echo
+    if [ "$IS_WSL" = "1" ]; then
+        echo "[INFO] Running under WSL: fonts are owned by the Windows host."
+        echo "       Install JetBrainsMono Nerd Font on Windows, e.g.:"
+        echo "         winget install --id=DEVCOM.JetBrainsMonoNerdFont"
+        echo "       (or from https://www.nerdfonts.com/), then restart"
+        echo "       Windows Terminal."
+        return 0
+    fi
+    if ! command -v curl &> /dev/null; then
+        echo "[WARN] curl is required to install JetBrainsMono Nerd Font."
+        return 0
+    fi
+    echo "[INFO] Installing JetBrainsMono Nerd Font (user-local)..."
+    fonttmp="${TMPDIR:-/tmp}/nerd-font-jbm"
+    rm -rf "$fonttmp"; mkdir -p "$fonttmp"
+    if ! curl -fsSL "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip" \
+            -o "$fonttmp/JetBrainsMono.zip" 2>/dev/null; then
+        echo "[WARN] Could not download JetBrainsMono Nerd Font."
+        rm -rf "$fonttmp"; return 0
+    fi
+    if command -v unzip &> /dev/null; then
+        unzip -q -o "$fonttmp/JetBrainsMono.zip" -d "$fonttmp" 2>/dev/null \
+            || { echo "[WARN] The font archive is invalid."; rm -rf "$fonttmp"; return 0; }
+    elif command -v bsdtar &> /dev/null; then
+        bsdtar -xf "$fonttmp/JetBrainsMono.zip" -C "$fonttmp" 2>/dev/null
+    elif command -v python3 &> /dev/null; then
+        # Minimal distros often lack unzip but ship python3.
+        python3 -c 'import sys,zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' \
+            "$fonttmp/JetBrainsMono.zip" "$fonttmp" 2>/dev/null \
+            || { echo "[WARN] Could not extract the font archive."; rm -rf "$fonttmp"; return 0; }
+    else
+        echo "[WARN] unzip (or bsdtar/python3) is required to extract the font archive."
+        rm -rf "$fonttmp"; return 0
+    fi
+    mkdir -p "$HOME/.local/share/fonts"
+    if ! find "$fonttmp" -maxdepth 1 \( -iname "*.ttf" -o -iname "*.otf" \) \
+            -exec cp -n {} "$HOME/.local/share/fonts/" \; 2>/dev/null; then
+        echo "[WARN] No font files found in the downloaded archive."
+        rm -rf "$fonttmp"; return 0
+    fi
+    rm -rf "$fonttmp"
+    if command -v fc-cache &> /dev/null; then
+        fc-cache -f "$HOME/.local/share/fonts" > /dev/null 2>&1
+        echo "[OK] JetBrainsMono Nerd Font installed (fc-cache refreshed)."
+    else
+        echo "[OK] JetBrainsMono Nerd Font installed to ~/.local/share/fonts."
+        echo "     Run 'fc-cache -f' / restart your terminal if icons don't appear."
+    fi
+    # Re-detect so the icon picker can default to Fancy.
+    if command -v fc-list &> /dev/null; then
+        fc-list "$HOME/.local/share/fonts" 2>/dev/null | grep -qiE "nerd" && NERD_FOUND=true
+    fi
+    if ! $NERD_FOUND; then
+        find "$HOME/.local/share/fonts" -maxdepth 1 -iname "*nerd*" 2>/dev/null | grep -q . && NERD_FOUND=true
+    fi
+}
+
+# ----------------------------------------------------------
 # Configure lsd icons
 # ----------------------------------------------------------
 
@@ -280,9 +363,9 @@ if command -v lsd &> /dev/null; then
     echo
     echo "[INFO] Configuring lsd icons..."
 
-    # Try to auto-detect Nerd Fonts (look for "Nerd" or "NF" in font names)
-    # Note: on WSL this may not find fonts installed on the Windows host,
-    # so the user can still pick Fancy manually.
+    # Try to auto-detect Nerd Fonts (look for "Nerd" or "NF" in font names).
+    # On WSL, fonts live on the Windows host (invisible to fontconfig), so we
+    # additionally scan the Windows user font directory exposed via /mnt/c.
     NERD_FOUND=false
     if command -v fc-list &> /dev/null; then
         fc-list : family 2>/dev/null | grep -qiE "nerd| nf" && NERD_FOUND=true
@@ -290,6 +373,21 @@ if command -v lsd &> /dev/null; then
     if ! $NERD_FOUND; then
         find "$HOME/.fonts" "$HOME/.local/share/fonts" /usr/share/fonts /usr/local/share/fonts \
             -maxdepth 3 \( -iname "*nerd*" -o -iname "* nf*" -o -iname "*-nf*" \) 2>/dev/null | grep -q . && NERD_FOUND=true
+    fi
+    if ! $NERD_FOUND && [ "$IS_WSL" = "1" ]; then
+        # Windows user-installed fonts (per-user registration; all-users fonts
+        # live elsewhere). Matches by file name on the Windows side.
+        if find /mnt/c/Users/*/AppData/Local/Microsoft/Windows/Fonts -maxdepth 1 \
+            \( -iname "*nerd*" -o -iname "* nf*" -o -iname "*-nf*" \) 2>/dev/null | grep -q .; then
+            NERD_FOUND=true
+            echo "       ✓ Nerd Font found (Windows host, via /mnt/c)"
+        fi
+    fi
+
+    # Opt-in: --with-nerd-font installs the font before the icon picker so the
+    # Nerd Font (Fancy) option can become the default.
+    if [ "$WITH_NERD_FONT" = "1" ] && ! $NERD_FOUND; then
+        install_nerd_font
     fi
 
     echo
@@ -319,6 +417,9 @@ if command -v lsd &> /dev/null; then
 
     case "$ICON_CHOICE" in
         1)
+            if ! $NERD_FOUND; then
+                install_nerd_font
+            fi
             mkdir -p "$HOME/.config/lsd"
             cp "$DOTFILES_DIR/config/lsd/config-fancy.yaml" "$HOME/.config/lsd/config.yaml"
             echo "[OK] Using fancy Nerd Font icons."
