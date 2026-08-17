@@ -1,5 +1,43 @@
 #!/bin/bash
 
+# ----------------------------------------------------------
+# Argument handling
+#   -y / --yes        : assume yes to prompts (install optional
+#                       build deps with sudo, pick default icons)
+#   --skip-blesh      : never build/install ble.sh
+#   -h / --help       : show usage
+# ----------------------------------------------------------
+ASSUME_YES=0
+SKIP_BLESH=0
+
+usage() {
+    echo "Usage: $0 [OPTIONS]"
+    echo
+    echo "Options:"
+    echo "  -y, --yes        Assume yes to prompts (install optional"
+    echo "                   build deps with sudo, use default icon style)."
+    echo "  --skip-blesh     Never build/install ble.sh."
+    echo "  -h, --help       Show this help and exit."
+}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -y|--yes)  ASSUME_YES=1 ;;
+        --skip-blesh) SKIP_BLESH=1 ;;
+        -h|--help) usage; exit 0 ;;
+        *) echo "[WARN] Unknown option: $1" ;;
+    esac
+    shift
+done
+
+# Non-interactive detection: stdin is not a terminal (e.g. /dev/null,
+# a closed pipe, or CI). When false, prompts silently use defaults.
+if [ -t 0 ]; then
+    INTERACTIVE=1
+else
+    INTERACTIVE=0
+fi
+
 echo "========================================="
 echo "         Dotfiles Setup"
 echo "========================================="
@@ -50,7 +88,16 @@ if ! command -v lsd &> /dev/null; then
         fi
     elif command -v curl &> /dev/null; then
         echo "[INFO] Fetching latest lsd version..."
-        LSD_VERSION=$(curl -sL https://api.github.com/repos/lsd-rs/lsd/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
+        # Fetch the latest release tag. Use jq when available for robust JSON
+        # parsing; fall back to a grep/cut for the archive tag name. On an
+        # API error (e.g. rate limit) the response is not JSON and the version
+        # is left empty, which is handled gracefully below.
+        LSD_API_JSON=$(curl -fsSL https://api.github.com/repos/lsd-rs/lsd/releases/latest 2>/dev/null || true)
+        if command -v jq &> /dev/null; then
+            LSD_VERSION=$(printf '%s' "$LSD_API_JSON" | jq -r '.tag_name // empty' 2>/dev/null)
+        else
+            LSD_VERSION=$(printf '%s' "$LSD_API_JSON" | grep '"tag_name"' | cut -d'"' -f4)
+        fi
         # Map the machine's CPU architecture to lsd's release asset names.
         # 64-bit Intel/ARM use the static musl builds; 32-bit ARM only ships gnu.
         case "$(uname -m)" in
@@ -102,23 +149,50 @@ fi
 
 if [ -f "$BLESH_DIR/ble.sh" ]; then
     BLESH_PRESENT=true
+elif [ "$SKIP_BLESH" = "1" ]; then
+    echo "[INFO] Skipping ble.sh (--skip-blesh)."
 else
     echo "[INFO] Installing ble.sh (Bash Line Editor)..."
 
     # ble.sh must be compiled with make and gawk, which may not be present.
     # On normal Linux this needs sudo; on Termux packages install user-local
     # via `pkg`, so no sudo is required.
+    BLESH_SKIP=0
+
     if ! command -v git &> /dev/null; then
         echo "[WARN] git is required to install ble.sh."
         echo "       Install it manually, then re-run this script."
+        BLESH_SKIP=1
     elif ! command -v make &> /dev/null || ! command -v gawk &> /dev/null; then
+        MISSING_DEPS=""
+        command -v make &> /dev/null || MISSING_DEPS="${MISSING_DEPS}make "
+        command -v gawk &> /dev/null || MISSING_DEPS="${MISSING_DEPS}gawk"
         if [ "$IS_TERMUX" = "1" ]; then
-            echo "[INFO] Installing make and gawk with pkg (no sudo needed)..."
+            echo "[INFO] Installing ${MISSING_DEPS} with pkg (no sudo needed)..."
             pkg install -y make gawk > /dev/null 2>&1
-        else
-            echo "[WARN] make and/or gawk are required to build ble.sh but are not installed."
+        elif [ "$ASSUME_YES" = "1" ]; then
+            echo "[INFO] -y given: installing ${MISSING_DEPS} with sudo..."
+            if command -v apt &> /dev/null; then
+                sudo apt-get update > /dev/null 2>&1
+                sudo apt-get install -y make gawk > /dev/null 2>&1
+            elif command -v dnf &> /dev/null; then
+                sudo dnf install -y make gawk > /dev/null 2>&1
+            elif command -v yum &> /dev/null; then
+                sudo yum install -y make gawk > /dev/null 2>&1
+            elif command -v pacman &> /dev/null; then
+                sudo pacman -S --noconfirm make gawk > /dev/null 2>&1
+            elif command -v zypper &> /dev/null; then
+                sudo zypper install -y make gawk > /dev/null 2>&1
+            elif command -v apk &> /dev/null; then
+                sudo apk add make gawk > /dev/null 2>&1
+            else
+                echo "[WARN] Unrecognized package manager."
+                echo "       Install ${MISSING_DEPS} manually, then re-run this script."
+            fi
+        elif [ "$INTERACTIVE" = "1" ]; then
+            echo "[WARN] ${MISSING_DEPS} required to build ble.sh but not installed."
             echo -n "       Install them now? (system-wide, needs sudo) [y/N] "
-            read -r INSTALL_DEPS
+            IFS= read -r INSTALL_DEPS || INSTALL_DEPS=""
             case "${INSTALL_DEPS:-n}" in
                 y|Y|yes|Yes|YES)
                     echo "[INFO] Installing build dependencies with sudo..."
@@ -139,17 +213,24 @@ else
                         sudo apk add make gawk > /dev/null 2>&1
                     else
                         echo "[WARN] Unrecognized package manager."
-                        echo "       Install make and gawk manually, then re-run this script."
+                        echo "       Install ${MISSING_DEPS} manually, then re-run this script."
                     fi
                     ;;
                 *)
-                    echo "[INFO] Skipping ble.sh. Install make and gawk yourself, then re-run."
+                    echo "[INFO] Skipping ble.sh. Install ${MISSING_DEPS} yourself, then re-run."
                     ;;
             esac
+        else
+            echo "[WARN] ${MISSING_DEPS} required to build ble.sh but not installed and"
+            echo "       running non-interactively. Skipping ble.sh (use -y to auto-install)."
+        fi
+        # If the build deps still aren't available, don't attempt a doomed build.
+        if ! command -v make &> /dev/null || ! command -v gawk &> /dev/null; then
+            BLESH_SKIP=1
         fi
     fi
 
-    if command -v make &> /dev/null; then
+    if [ "$BLESH_SKIP" = "0" ]; then
         echo "[INFO] Building ble.sh from GitHub..."
         # Remove any leftover copy so a stale/partial clone can't block us.
         rm -rf "$BLESH_TMP"
@@ -228,8 +309,13 @@ if command -v lsd &> /dev/null; then
         echo "         3) No icons  [default]"
         DEFAULT_CHOICE=3
     fi
-    read -rp "       Enter choice or press Enter for default [$DEFAULT_CHOICE]: " ICON_CHOICE
-    ICON_CHOICE=${ICON_CHOICE:-$DEFAULT_CHOICE}
+    if [ "$ASSUME_YES" = "1" ] || [ "$INTERACTIVE" != "1" ]; then
+        echo "       Non-interactive: using default [$DEFAULT_CHOICE]."
+        ICON_CHOICE=$DEFAULT_CHOICE
+    else
+        read -rp "       Enter choice or press Enter for default [$DEFAULT_CHOICE]: " ICON_CHOICE
+        ICON_CHOICE=${ICON_CHOICE:-$DEFAULT_CHOICE}
+    fi
 
     case "$ICON_CHOICE" in
         1)
@@ -348,6 +434,8 @@ else
 fi
 if [ "$BLESH_PRESENT" = true ]; then
     echo "  ✅ ble.sh ready"
+elif [ "$SKIP_BLESH" = "1" ] || [ "$BLESH_SKIP" = "1" ] || [ ! -f "$BLESH_DIR/ble.sh" ]; then
+    echo "  ⚠️  ble.sh NOT installed — install make+gawk, then re-run (or use -y)"
 fi
 if command -v starship &> /dev/null; then
     echo "  ✅ starship ready with pastel-powerline preset"

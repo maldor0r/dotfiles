@@ -52,6 +52,18 @@ The installer auto-installs missing tools, configures starship with the
 pastel-powerline preset, and wires up your shell profile — **all without
 `sudo`**.
 
+**Installer options (Linux):**
+
+```bash
+./install.sh -y             # assume yes: auto-install optional build deps,
+                            # pick the default icon style — no prompts
+./install.sh --skip-blesh   # skip building/installing ble.sh
+./install.sh -h             # show help
+```
+
+Non-interactive runs (no TTY, e.g. CI) automatically use defaults for the
+icon-style and `ble.sh` dependency prompts instead of blocking.
+
 > **How it works:** tools are installed into your own user directory
 > (`~/.local/bin`) so no admin/root access is required. This works even
 > on fresh WSL distros or cloud VMs where you don't have (or don't want

@@ -9,7 +9,8 @@
 # ----------------------------------------------------------
 
 if [ -z "${USER:-}" ] && command -v id &> /dev/null; then
-    export USER="$(id -un)"
+    _dotfiles_user="$(id -un)"
+    export USER="${_dotfiles_user}"
 fi
 
 # ble.sh warns when the locale is the degenerate "C" locale (common on
