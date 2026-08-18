@@ -65,10 +65,12 @@ pastel-powerline preset, and wires up your shell profile — **all without
 Non-interactive runs (no TTY, e.g. CI) automatically use defaults for the
 icon-style and `ble.sh` dependency prompts instead of blocking.
 
-**Windows (PowerShell) Nerd Font:**
+**Windows (PowerShell) Nerd Font / icons:**
 
 ```powershell
-.\install.ps1 -WithNerdFont   # install JetBrainsMono Nerd Font on Windows
+.\install.ps1 -WithNerdFont                 # install JetBrainsMono Nerd Font on Windows
+.\install.ps1 -Icons fancy                  # force lsd icons: fancy | unicode | none | auto
+.\install.ps1 -Icons fancy -WithNerdFont    # install the font, then use fancy icons
 ```
 
 **Nerd Fonts:** icon support needs a Nerd Font. On native Linux the installer

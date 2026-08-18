@@ -4,7 +4,9 @@
 # =========================================================
 
 param(
-    [switch]$WithNerdFont  # download & install JetBrainsMono Nerd Font on Windows
+    [switch]$WithNerdFont,                               # download & install JetBrainsMono Nerd Font on Windows
+    [ValidateSet("auto", "fancy", "unicode", "none")]    # lsd icon style
+    [string]$Icons = "auto"                              #   auto=detect, or force fancy/unicode/none
 )
 
 $ErrorActionPreference = "Stop"
@@ -19,6 +21,21 @@ Write-Host ""
 
 $DOTFILES_DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
 
+# winget/app-installer update the persisted (registry) PATH, but the current
+# process keeps its session snapshot; re-read Machine+User PATH so the
+# Get-Command checks right after an install see the freshly added programs.
+function Refresh-EnvPath {
+    $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+    $userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
+    $env:Path = (@($machinePath, $userPath) | Where-Object { $_ }) -join ";"
+}
+
+# A fresh App Installer (winget) starts with an empty source cache; refresh it
+# once so the very first `winget install` doesn't fail with a source error.
+if (Get-Command winget -ErrorAction SilentlyContinue) {
+    winget source update 2>$null | Out-Null
+}
+
 # ----------------------------------------------------------
 # starship
 # ----------------------------------------------------------
@@ -26,7 +43,8 @@ $DOTFILES_DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
 if (-not (Get-Command starship -ErrorAction SilentlyContinue)) {
     Write-Host "[INFO] Installing starship..."
     if (Get-Command winget -ErrorAction SilentlyContinue) {
-        winget install --id Starship.Starship --accept-source-agreements --accept-package-agreements --silent
+        winget install --id Starship.Starship --source winget --accept-source-agreements --accept-package-agreements --silent 2>$null
+        Refresh-EnvPath
     } else {
         Write-Warning "winget not found. Install starship manually (https://starship.rs) and re-run."
     }
@@ -44,7 +62,8 @@ if (-not (Get-Command starship -ErrorAction SilentlyContinue)) {
 if (-not (Get-Command lsd -ErrorAction SilentlyContinue)) {
     Write-Host "[INFO] Installing lsd..."
     if (Get-Command winget -ErrorAction SilentlyContinue) {
-        winget install --id lsd-rs.lsd --accept-source-agreements --accept-package-agreements --silent
+        winget install --id lsd-rs.lsd --source winget --accept-source-agreements --accept-package-agreements --silent 2>$null
+        Refresh-EnvPath
     } else {
         Write-Warning "winget not found. Install lsd manually (https://github.com/lsd-rs/lsd) and re-run."
     }
@@ -73,11 +92,25 @@ if (Get-Command starship -ErrorAction SilentlyContinue) {
 # ----------------------------------------------------------
 
 function Test-NerdFont {
-    # A Nerd Font is present if the installed-font collection lists a
-    # family matching "Nerd" or " NF" (e.g. "JetBrainsMono Nerd Font").
+    # Registry-first: a font registered for the user/machine shows up here
+    # immediately (no process restart needed, unlike the GDI snapshot). Each
+    # value name looks like "JetBrainsMono Nerd Font (TrueType)".
+    $regPaths = @(
+        "HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts",
+        "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Fonts"
+    )
+    foreach ($p in $regPaths) {
+        if (Test-Path $p) {
+            foreach ($prop in (Get-ItemProperty $p).PSObject.Properties) {
+                if ($prop.Name -match "Nerd|NF") { return $true }
+            }
+        }
+    }
+    # Fallback: installed-font collection (cached per process, so mainly used
+    # for fonts present before this session started).
     try {
-        $fonts = New-Object System.Drawing.Text.InstalledFontCollection
-        foreach ($family in $fonts.Families) {
+        $coll = New-Object System.Drawing.Text.InstalledFontCollection
+        foreach ($family in $coll.Families) {
             if ($family.Name -match "Nerd| NF") { return $true }
         }
     } catch { }
@@ -86,13 +119,16 @@ function Test-NerdFont {
 
 $nerdFontPresent = Test-NerdFont
 
-if ($WithNerdFont -and -not $nerdFontPresent) {
+# Install the Nerd Font when opted in, no Nerd Font is present, and the user
+# did not explicitly pick "none".
+if ($WithNerdFont -and -not $nerdFontPresent -and $Icons -ne "none") {
     Write-Host "[INFO] Installing JetBrainsMono Nerd Font..."
     $installed = $false
 
-    # Preferred: winget package. (Verify the exact ID on first Windows run.)
+    # Preferred: winget package.
     if (Get-Command winget -ErrorAction SilentlyContinue) {
-        winget install --id DEVCOM.JetBrainsMonoNerdFont --accept-source-agreements --accept-package-agreements --silent 2>$null
+        winget install --id DEVCOM.JetBrainsMonoNerdFont --source winget --accept-source-agreements --accept-package-agreements --silent 2>$null
+        Refresh-EnvPath
         $installed = Test-NerdFont
     }
 
@@ -109,7 +145,9 @@ if ($WithNerdFont -and -not $nerdFontPresent) {
             Expand-Archive -LiteralPath $tmp -DestinationPath $extract -Force
             Remove-Item $tmp -Force
 
-            Add-Type -Namespace Win32 -Name Font -MemberDefinition '[DllImport("gdi32.dll")] public static extern int AddFontResource(string file);'
+            if (-not ("Win32.Font" -as [type])) {
+                Add-Type -Namespace Win32 -Name Font -MemberDefinition '[DllImport("gdi32.dll")] public static extern int AddFontResource(string file);'
+            }
 
             $fontFiles = Get-ChildItem $extract -Recurse | Where-Object { $_.Extension -in ".ttf", ".otf" }
             $fontsReg = "HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts"
@@ -128,22 +166,67 @@ if ($WithNerdFont -and -not $nerdFontPresent) {
     if ($nerdFontPresent) {
         Write-Host "[OK] Nerd Font installed. Restart Windows Terminal to use it."
     }
-} elseif (-not $nerdFontPresent) {
-    Write-Host "[INFO] No Nerd Font detected. ls will use plain icons."
-    Write-Host "       Install one on Windows (e.g. winget install --id DEVCOM.JetBrainsMonoNerdFont)"
-    Write-Host "       and re-run with -WithNerdFont for fancy lsd icons."
 }
 
-# Configure lsd icons to match the detected font.
+# Resolve the icon style: explicit choice wins; otherwise auto = fancy when a
+# Nerd Font is present, else plain.
+if ($Icons -eq "auto") {
+    $iconStyle = if ($nerdFontPresent) { "fancy" } else { "none" }
+} else {
+    $iconStyle = $Icons
+}
+
+# Configure lsd icons with the resolved style (only relevant when lsd is installed).
 if (Get-Command lsd -ErrorAction SilentlyContinue) {
     $lsdConfigDir = Join-Path $env:USERPROFILE ".config\lsd"
     New-Item -ItemType Directory -Force -Path $lsdConfigDir | Out-Null
-    if ($nerdFontPresent) {
-        Copy-Item (Join-Path $DOTFILES_DIR "config\lsd\config-fancy.yaml") (Join-Path $lsdConfigDir "config.yaml") -Force
-        Write-Host "[OK] lsd configured with fancy Nerd Font icons."
-    } else {
-        Copy-Item (Join-Path $DOTFILES_DIR "config\lsd\config-no-icons.yaml") (Join-Path $lsdConfigDir "config.yaml") -Force
-        Write-Host "[OK] lsd configured with icons disabled."
+    switch ($iconStyle) {
+        "fancy" {
+            Copy-Item (Join-Path $DOTFILES_DIR "config\lsd\config-fancy.yaml") (Join-Path $lsdConfigDir "config.yaml") -Force
+            Write-Host "[OK] lsd configured with fancy Nerd Font icons."
+            if (-not $nerdFontPresent) {
+                Write-Host "      Note: no Nerd Font detected - icons may not render until one is installed."
+            }
+        }
+        "unicode" {
+            Copy-Item (Join-Path $DOTFILES_DIR "config\lsd\config-unicode.yaml") (Join-Path $lsdConfigDir "config.yaml") -Force
+            Write-Host "[OK] lsd configured with unicode icons."
+        }
+        "none" {
+            Copy-Item (Join-Path $DOTFILES_DIR "config\lsd\config-no-icons.yaml") (Join-Path $lsdConfigDir "config.yaml") -Force
+            Write-Host "[OK] lsd configured with icons disabled."
+        }
+    }
+}
+
+# Informative hint when auto-detection found no Nerd Font.
+if ($Icons -eq "auto" -and -not $nerdFontPresent) {
+    Write-Host "[INFO] No Nerd Font detected - using plain icons by default."
+    Write-Host "       Force a style with -Icons fancy|unicode|none, or install one and"
+    Write-Host "       re-run (e.g. winget install --id DEVCOM.JetBrainsMonoNerdFont)."
+}
+
+# ----------------------------------------------------------
+# PowerShell execution policy
+# ----------------------------------------------------------
+
+# The profile generated below is a script; on a default-locked system
+# (e.g. a fresh Windows Sandbox) the execution policy "Restricted" blocks
+# local scripts and "AllSigned" only allows signed ones. Set it to
+# RemoteSigned for the current user only (minimal, non-admin change) so the
+# freshly generated local profile loads in future (non-Bypass) sessions.
+# We inspect CurrentUser scope rather than the effective policy so a run that
+# itself launched under `-ExecutionPolicy Bypass` still normalizes the user
+# policy (under Bypass the effective value would be "Bypass" and we would
+# otherwise skip doing anything).
+$userEp = Get-ExecutionPolicy -Scope CurrentUser
+if ($userEp -notin @("RemoteSigned", "Unrestricted", "Bypass")) {
+    try {
+        Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
+        Write-Host "[OK] Execution policy (CurrentUser) set to RemoteSigned so the profile can load."
+    } catch {
+        Write-Warning "Could not adjust the execution policy. The profile may not load; run:"
+        Write-Warning "    Set-ExecutionPolicy -Scope CurrentUser RemoteSigned"
     }
 }
 
@@ -201,19 +284,31 @@ Set-PSReadLineOption -EditMode Windows
 # ----- end dotfiles (managed) -----
 "@
 
-# Detect an existing managed block (either our marker or the legacy
-# "starship init" text) so we never duplicate the config on re-runs.
-$alreadyConfigured = $false
+# Detect an existing managed block. If found, replace it in place so re-runs
+# self-heal (e.g. lsd aliases appear once lsd gets installed later); if only a
+# legacy "starship init" line exists, leave it alone to avoid duplication.
+$blockEnd = "# ----- end dotfiles (managed) -----"
+$managedReplaced = $false
 if (Test-Path $PROFILE) {
     $existing = Get-Content $PROFILE -Raw -ErrorAction SilentlyContinue
-    if ($existing -match [regex]::Escape($marker) -or $existing -match "starship init") {
-        $alreadyConfigured = $true
+    $sIdx = $existing.IndexOf($marker)
+    $eIdx = $existing.IndexOf($blockEnd)
+    if ($sIdx -ge 0 -and $eIdx -gt $sIdx) {
+        $eIdx += $blockEnd.Length
+        $ts = Get-Date -Format "yyyyMMdd-HHmm"
+        Copy-Item $PROFILE "$PROFILE.$ts.bak"
+        Write-Host "[OK] Backup created: $PROFILE.$ts.bak"
+        $existing = $existing.Substring(0, $sIdx) + $profileContent + $existing.Substring($eIdx)
+        Set-Content -Path $PROFILE -Value $existing
+        Write-Host "[OK] Profile updated."
+        $managedReplaced = $true
+    } elseif ($existing -match "starship init") {
+        Write-Host "[OK] Profile is already configured (legacy)."
+        $managedReplaced = $true
     }
 }
 
-if ($alreadyConfigured) {
-    Write-Host "[OK] Profile is already configured."
-} else {
+if (-not $managedReplaced) {
     # Back up the existing profile only when we are actually going to modify it.
     if (Test-Path $PROFILE) {
         $ts = Get-Date -Format "yyyyMMdd-HHmm"
