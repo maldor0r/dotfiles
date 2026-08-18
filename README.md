@@ -49,10 +49,12 @@ git clone https://github.com/maldor0r/dotfiles; cd dotfiles; .\install.ps1
 ```
 
 The installer auto-installs missing tools, configures starship with the
-pastel-powerline preset, and wires up your shell profile — **all without
-`sudo`**.
+pastel-powerline preset, and wires up your shell profile.
 
-**Installer options (Linux):**
+<details>
+<summary>Installer options & details</summary>
+
+**Linux options:**
 
 ```bash
 ./install.sh -y                # assume yes: auto-install optional build deps,
@@ -65,7 +67,7 @@ pastel-powerline preset, and wires up your shell profile — **all without
 Non-interactive runs (no TTY, e.g. CI) automatically use defaults for the
 icon-style and `ble.sh` dependency prompts instead of blocking.
 
-**Windows (PowerShell) Nerd Font / icons:**
+**Windows options:**
 
 ```powershell
 .\install.ps1 -WithNerdFont                 # install JetBrainsMono Nerd Font on Windows
@@ -79,16 +81,17 @@ installed on the **Windows** side — installing it inside Linux is invisible to
 the Windows terminal. The installer detects Nerd Fonts (including Windows-host
 fonts, via `/mnt/c`) and picks the icon style automatically.
 
-> **How it works:** tools are installed into your own user directory
-> (`~/.local/bin`) so no admin/root access is required. This works even
-> on fresh WSL distros or cloud VMs where you don't have (or don't want
-> to grant) sudo rights. Downside: updates are manual — re-run the
-> installer to fetch new versions. `~/.local/bin` is added to your
-> `$PATH` automatically.
->
-> **One optional sudo step:** installing `ble.sh` requires the `make`
-> build tool. If `make` is missing, the installer will ask whether to
-> install it with sudo — it will never use sudo without your consent.
+**How it works:** tools are installed into your own user directory
+(`~/.local/bin`) so no admin/root access is required. This works even on fresh
+WSL distros or cloud VMs where you don't have (or don't want to grant) sudo
+rights. Downside: updates are manual — re-run the installer to fetch new
+versions. `~/.local/bin` is added to your `$PATH` automatically.
+
+**One optional sudo step:** installing `ble.sh` requires the `make` build
+tool. If `make` is missing, the installer will ask whether to install it with
+sudo — it will never use sudo without your consent.
+
+</details>
 
 ## Configuration
 
@@ -99,17 +102,6 @@ Pre-configured templates are in `config/`:
 
 Copy the desired template to `~/.config/lsd/config.yaml` or `~/.config/starship.toml`,
 or re-run the installer.
-
-## Roadmap
-
-- [x] Custom Bash configuration
-- [x] Initial `lsd` aliases
-- [x] Installation script
-- [x] `ble.sh` integration
-- [x] starship prompt
-- [ ] Git configuration
-- [ ] Bash functions
-- [ ] Additional shell improvements
 
 ---
 
