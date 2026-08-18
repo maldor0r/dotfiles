@@ -84,7 +84,14 @@ echo "       No sudo or system-wide changes are required."
 echo
 
 DOTFILES_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-BASHRC_CUSTOM="$DOTFILES_DIR/.bashrc_custom"
+
+# Copy the custom shell config to a stable, repo-independent location so the
+# shell keeps working even if this repo is moved or renamed. Re-running the
+# installer refreshes this copy.
+DOTFILES_CONFIG_DIR="$HOME/.config/dotfiles"
+mkdir -p "$DOTFILES_CONFIG_DIR"
+BASHRC_CUSTOM="$DOTFILES_CONFIG_DIR/.bashrc_custom"
+cp -f "$DOTFILES_DIR/.bashrc_custom" "$BASHRC_CUSTOM"
 BASHRC_CUSTOM_ESCAPED=$(printf '%q' "$BASHRC_CUSTOM")
 
 # ----------------------------------------------------------
@@ -274,17 +281,70 @@ fi
 
 if ! command -v starship &> /dev/null; then
     echo "[INFO] Installing starship..."
-    if command -v curl &> /dev/null; then
-        if curl -sS https://starship.rs/install.sh | sh -s -- -y --bin-dir "$LOCAL_BIN" > /dev/null 2>&1; then
-            echo "[OK] starship installed to $LOCAL_BIN."
+    if [ "$IS_TERMUX" = "1" ]; then
+        # Termux's bionic libc isn't covered by the GitHub musl/glibc release
+        # assets, so keep the official installer there (it handles Termux).
+        if command -v curl &> /dev/null; then
+            if curl -sS https://starship.rs/install.sh | sh -s -- -y --bin-dir "$LOCAL_BIN" > /dev/null 2>&1; then
+                echo "[OK] starship installed to $LOCAL_BIN."
+            else
+                echo "[WARN] starship installation failed."
+                echo "       Install it manually later from:"
+                echo "         https://starship.rs/install.sh"
+            fi
         else
-            echo "[WARN] starship installation failed."
-            echo "       You can install it manually later from:"
-            echo "         https://starship.rs/install.sh"
+            echo "[WARN] curl is required to install starship."
+            echo "       Install it manually, then re-run this script."
+        fi
+    elif command -v curl &> /dev/null; then
+        echo "[INFO] Fetching latest starship version..."
+        STARSHIP_API_JSON=$(curl -fsSL https://api.github.com/repos/starship/starship/releases/latest 2>/dev/null || true)
+        if command -v jq &> /dev/null; then
+            STARSHIP_VERSION=$(printf '%s' "$STARSHIP_API_JSON" | jq -r '.tag_name // empty' 2>/dev/null)
+        else
+            STARSHIP_VERSION=$(printf '%s' "$STARSHIP_API_JSON" | grep '"tag_name"' | cut -d'"' -f4)
+        fi
+        # Map the machine's CPU architecture to starship's release assets.
+        case "$(uname -m)" in
+            x86_64|amd64)        STARSHIP_ARCH="x86_64-unknown-linux-musl" ;;
+            aarch64|arm64)       STARSHIP_ARCH="aarch64-unknown-linux-musl" ;;
+            armv7*|armv6*|arm)   STARSHIP_ARCH="arm-unknown-linux-gnueabihf" ;;
+            i686|i386|x86)       STARSHIP_ARCH="i686-unknown-linux-musl" ;;
+            *)                   STARSHIP_ARCH="" ;;
+        esac
+        if [ -n "$STARSHIP_VERSION" ] && [ -n "$STARSHIP_ARCH" ]; then
+            STARSHIP_URL="https://github.com/starship/starship/releases/download/${STARSHIP_VERSION}/starship-${STARSHIP_ARCH}.tar.gz"
+            echo "[INFO] Downloading starship ${STARSHIP_VERSION} (${STARSHIP_ARCH})..."
+            if command -v sha256sum &> /dev/null; then
+                SHA=$(curl -fsSL "${STARSHIP_URL}.sha256" 2>/dev/null | awk '{print $1}')
+                if [ -n "$SHA" ] && \
+                   curl -fsSL "$STARSHIP_URL" -o /tmp/starship.tar.gz && \
+                   printf '%s  /tmp/starship.tar.gz\n' "$SHA" | sha256sum -c - > /dev/null 2>&1 && \
+                   tar xzf /tmp/starship.tar.gz -C /tmp && \
+                   install -m 755 /tmp/starship "$LOCAL_BIN/starship" && \
+                   rm -rf /tmp/starship.tar.gz; then
+                    echo "[OK] starship installed to $LOCAL_BIN."
+                else
+                    echo "[WARN] Could not install starship automatically (download or checksum failed)."
+                    rm -f /tmp/starship.tar.gz
+                fi
+            else
+                echo "[WARN] sha256sum is required to verify the starship download; skipping automatic install."
+                echo "       Install it manually from: https://starship.rs/install.sh"
+            fi
+        elif [ -z "$STARSHIP_ARCH" ]; then
+            echo "[WARN] Unsupported architecture '$(uname -m)' — cannot download starship."
+            echo "       Install it manually from: https://starship.rs/install.sh"
+        else
+            echo "[WARN] Could not determine the latest starship version."
         fi
     else
         echo "[WARN] curl is required to install starship."
         echo "       Install it manually, then re-run this script."
+    fi
+    if ! command -v starship &> /dev/null; then
+        echo "[WARN] Could not install starship. Install it manually from:"
+        echo "       https://starship.rs/install.sh"
     fi
 fi
 
@@ -333,9 +393,17 @@ install_nerd_font() {
         rm -rf "$fonttmp"; return 0
     fi
     mkdir -p "$HOME/.local/share/fonts"
-    if ! find "$fonttmp" -maxdepth 1 \( -iname "*.ttf" -o -iname "*.otf" \) \
-            -exec cp -n {} "$HOME/.local/share/fonts/" \; 2>/dev/null; then
-        echo "[WARN] No font files found in the downloaded archive."
+    # Copy each font file explicitly and count successes. (A bare
+    # `find ... -exec cp` cannot detect cp failures: find reports its own
+    # status, not the command's.)
+    copied=0
+    for f in "$fonttmp"/*.ttf "$fonttmp"/*.otf; do
+        if [ -f "$f" ]; then
+            cp -n "$f" "$HOME/.local/share/fonts/" 2>/dev/null && copied=$((copied + 1))
+        fi
+    done
+    if [ "$copied" -eq 0 ]; then
+        echo "[WARN] No font files could be copied from the downloaded archive."
         rm -rf "$fonttmp"; return 0
     fi
     rm -rf "$fonttmp"
@@ -478,6 +546,21 @@ fi
 ADD_DOTFILES=false
 if ! grep -Fq "source ${BASHRC_CUSTOM_ESCAPED}" "$HOME/.bashrc" 2>/dev/null; then
     ADD_DOTFILES=true
+fi
+
+# Migrate installs that referenced the repo path directly: rewrite both the
+# `if [ -f ... ]` guard and the `source` line of an existing dotfiles block to
+# point at the new stable location, so a moved repo can't silently disable the
+# shell config.
+if [ "$ADD_DOTFILES" = true ] && grep -Eq "\.bashrc_custom" "$HOME/.bashrc" 2>/dev/null; then
+    OLD_BASHRC_BACKUP="$HOME/.bashrc.backup.$(date +%Y%m%d-%H%M)"
+    cp "$HOME/.bashrc" "$OLD_BASHRC_BACKUP" 2>/dev/null
+    sed -i "s|^if \[ -f .*\.bashrc_custom \]; then$|if [ -f ${BASHRC_CUSTOM} ]; then|; \
+            s|^ *source .*\.bashrc_custom$|    source ${BASHRC_CUSTOM}|" "$HOME/.bashrc"
+    if grep -Fq "source ${BASHRC_CUSTOM_ESCAPED}" "$HOME/.bashrc" 2>/dev/null; then
+        ADD_DOTFILES=false
+        echo "[OK] Migrated .bashrc to the new dotfiles location (backup: $OLD_BASHRC_BACKUP)."
+    fi
 fi
 
 if [ "$ADD_BLESH" = true ] || [ "$ADD_DOTFILES" = true ]; then

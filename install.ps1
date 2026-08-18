@@ -237,6 +237,20 @@ if ($userEp -notin @("RemoteSigned", "Unrestricted", "Bypass")) {
 $PROFILE_DIR = Split-Path -Parent $PROFILE
 $marker = "# ----- dotfiles (managed) -----"
 
+# Only add the starship prompt when it is actually available, so a missing
+# starship doesn't write a broken `Invoke-Expression` into the profile that
+# errors on every new shell.
+$starshipBlock = ""
+if (Get-Command starship -ErrorAction SilentlyContinue) {
+    $starshipBlock = @"
+
+# starship prompt
+Invoke-Expression (&starship init powershell)
+"@
+} else {
+    Write-Warning "starship not installed - the shell prompt will not be customized. Re-run after installing starship."
+}
+
 # Only add lsd aliases when lsd is actually available, so a missing lsd
 # doesn't replace the stock, working `ls` with a broken command.
 $lsdBlock = ""
@@ -270,8 +284,7 @@ $profileContent = @"
 # ==========================================================
 $marker
 
-# starship prompt
-Invoke-Expression (&starship init powershell)
+$starshipBlock
 $lsdBlock
 # PSReadLine: syntax highlighting and autocomplete (prediction needs PSReadLine 2.2+)
 try {
