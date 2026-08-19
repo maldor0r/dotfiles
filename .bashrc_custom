@@ -18,7 +18,7 @@ fi
 # warning goes away; a robust alternative for missing locale data is
 # `pkg install -y libandroid-support` plus generating a locale.
 if [ -n "${PREFIX:-}" ] && { [ -z "${LC_ALL:-}" ] || [ "$LC_ALL" = "C" ] || [ "$LC_ALL" = "POSIX" ]; }; then
-    export LC_ALL='C.UTF-8' LANG='C.UTF-8'
+    export LC_ALL='C.UTF-8' LANG='C.UTF-8' LC_CTYPE='C.UTF-8'
 fi
 
 # ----------------------------------------------------------
