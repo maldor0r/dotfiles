@@ -13,11 +13,14 @@ if [ -z "${USER:-}" ] && command -v id &> /dev/null; then
     export USER="${_dotfiles_user}"
 fi
 
-# ble.sh warns when the locale is the degenerate "C" locale (common on
-# Termux). NOTE: setting LANG only helps if that locale is actually
-# installed; the robust fix is `pkg install -y libandroid-support` plus
-# generating the locale. So here we only ensure a locale is picked when
-# one is unset and looks installed — otherwise leave it alone.
+# ble.sh and other tools warn when the locale is the degenerate "C" locale
+# (common on Termux). Prefer an available UTF-8 locale, but only set LANG when
+# one actually exists so we don't break setups without it. A robust alternative
+# is `pkg install -y libandroid-support` plus generating a locale.
+if [ -n "${PREFIX:-}" ] && { [ -z "${LANG:-}" ] || [ "$LANG" = "C" ] || [ "$LANG" = "POSIX" ]; } && command -v locale >/dev/null 2>&1; then
+    _utf8loc="$(locale -a 2>/dev/null | grep -iE 'utf-?8' | head -n 1)"
+    [ -n "$_utf8loc" ] && export LANG="$_utf8loc"
+fi
 
 # ----------------------------------------------------------
 # User-local binaries (~/.local/bin) on PATH

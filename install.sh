@@ -617,6 +617,10 @@ if [ "$ADD_BLESH" = true ]; then
         echo
         echo "# Bash Line Editor (ble.sh)"
         echo "if [ -z \"\${USER:-}\" ] && command -v id &> /dev/null; then export USER=\"\$(id -un)\"; fi"
+        echo "if [ -n \"\${PREFIX:-}\" ] && { [ -z \"\${LANG:-}\" ] || [ \"\$LANG\" = 'C' ] || [ \"\$LANG\" = 'POSIX' ]; } && command -v locale >/dev/null 2>&1; then"
+        echo "    _utf8loc=\$(locale -a 2>/dev/null | grep -iE 'utf-?8' | head -n 1)"
+        echo "    [ -n \"\$_utf8loc\" ] && export LANG=\"\$_utf8loc\""
+        echo "fi"
         echo "source \$HOME/.local/share/blesh/ble.sh"
     } >> "$HOME/.bashrc"
     echo "[OK] ble.sh added to ~/.bashrc."
