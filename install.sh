@@ -74,7 +74,7 @@ fi
 # it (consent-gated); once installed, later runs skip the offer.
 termux_fix_locale() {
     echo
-    echo "[WARN] Termux has no UTF-8 locale, which makes ble.sh warn on every shell."
+    echo "[WARN] Termux has no usable UTF-8 locale, which makes ble.sh warn on every shell."
     echo "       The shell config auto-sets LC_ALL=C.UTF-8 (Bionic's native locale);"
     echo "       installing libandroid-support provides the underlying locale data."
     local answer="n"
@@ -86,7 +86,6 @@ termux_fix_locale() {
         IFS= read -r answer || answer=""
     else
         echo "       Non-interactive run: install it manually with: pkg install -y libandroid-support"
-        return 0
     fi
     case "${answer:-n}" in
         y|Y|yes|Yes|YES)
@@ -101,9 +100,12 @@ termux_fix_locale() {
             echo "[INFO] Skipping. Install it yourself later: pkg install -y libandroid-support"
             ;;
     esac
+    # Only ask once, so repeated installs don't nag.
+    mkdir -p "$HOME/.config/dotfiles"
+    touch "$HOME/.config/dotfiles/.locale_fix_asked"
 }
 
-if [ "$IS_TERMUX" = "1" ] && ! dpkg -s libandroid-support >/dev/null 2>&1 && ! locale -a 2>/dev/null | grep -qiE 'utf-?8'; then
+if [ "$IS_TERMUX" = "1" ] && [ ! -f "$HOME/.config/dotfiles/.locale_fix_asked" ] && ! locale -a 2>/dev/null | grep -qiE 'utf-?8'; then
     termux_fix_locale
 fi
 
@@ -661,7 +663,7 @@ cp "$STRIP" "$STAGE"
         echo
         echo "$BLE_START"
         echo "if [ -z \"\${USER:-}\" ] && command -v id &> /dev/null; then export USER=\"\$(id -un)\"; fi"
-        echo "if [ -n \"\${PREFIX:-}\" ] && { [ -z \"\${LC_ALL:-}\" ] || [ \"\$LC_ALL\" = 'C' ] || [ \"\$LC_ALL\" = 'POSIX' ]; } && { [ -z \"\${LANG:-}\" ] || [ \"\$LANG\" = 'C' ] || [ \"\$LANG\" = 'POSIX' ]; }; then"
+        echo "if [ -n \"\${PREFIX:-}\" ] && { [ -z \"\${LC_ALL:-}\" ] || [ \"\$LC_ALL\" = 'C' ] || [ \"\$LC_ALL\" = 'POSIX' ]; }; then"
         echo "    export LC_ALL='C.UTF-8' LANG='C.UTF-8'"
         echo "fi"
         echo "source \$HOME/.local/share/blesh/ble.sh"
