@@ -14,12 +14,11 @@ if [ -z "${USER:-}" ] && command -v id &> /dev/null; then
 fi
 
 # ble.sh and other tools warn when the locale is the degenerate "C" locale
-# (common on Termux). Prefer an available UTF-8 locale, but only set LANG when
-# one actually exists so we don't break setups without it. A robust alternative
-# is `pkg install -y libandroid-support` plus generating a locale.
-if [ -n "${PREFIX:-}" ] && { [ -z "${LANG:-}" ] || [ "$LANG" = "C" ] || [ "$LANG" = "POSIX" ]; } && command -v locale >/dev/null 2>&1; then
-    _utf8loc="$(locale -a 2>/dev/null | grep -iE 'utf-?8' | head -n 1)"
-    [ -n "$_utf8loc" ] && export LANG="$_utf8loc"
+# (common on Termux). Force Bionic's native UTF-8 C locale at runtime so the
+# warning goes away; a robust alternative for missing locale data is
+# `pkg install -y libandroid-support` plus generating a locale.
+if [ -n "${PREFIX:-}" ] && { [ -z "${LC_ALL:-}" ] || [ "$LC_ALL" = "C" ] || [ "$LC_ALL" = "POSIX" ]; } && { [ -z "${LANG:-}" ] || [ "$LANG" = "C" ] || [ "$LANG" = "POSIX" ]; }; then
+    export LC_ALL='C.UTF-8' LANG='C.UTF-8'
 fi
 
 # ----------------------------------------------------------

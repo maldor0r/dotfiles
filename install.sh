@@ -74,8 +74,9 @@ fi
 # it (consent-gated); once installed, later runs skip the offer.
 termux_fix_locale() {
     echo
-    echo "[WARN] Termux's 'C' locale is broken, which makes ble.sh warn on every shell."
-    echo "       Installing libandroid-support provides working locale support."
+    echo "[WARN] Termux has no UTF-8 locale, which makes ble.sh warn on every shell."
+    echo "       The shell config auto-sets LC_ALL=C.UTF-8 (Bionic's native locale);"
+    echo "       installing libandroid-support provides the underlying locale data."
     local answer="n"
     if [ "$ASSUME_YES" = "1" ]; then
         answer="y"
@@ -102,7 +103,7 @@ termux_fix_locale() {
     esac
 }
 
-if [ "$IS_TERMUX" = "1" ] && ! dpkg -s libandroid-support >/dev/null 2>&1; then
+if [ "$IS_TERMUX" = "1" ] && ! dpkg -s libandroid-support >/dev/null 2>&1 && ! locale -a 2>/dev/null | grep -qiE 'utf-?8'; then
     termux_fix_locale
 fi
 
@@ -660,9 +661,8 @@ cp "$STRIP" "$STAGE"
         echo
         echo "$BLE_START"
         echo "if [ -z \"\${USER:-}\" ] && command -v id &> /dev/null; then export USER=\"\$(id -un)\"; fi"
-        echo "if [ -n \"\${PREFIX:-}\" ] && { [ -z \"\${LANG:-}\" ] || [ \"\$LANG\" = 'C' ] || [ \"\$LANG\" = 'POSIX' ]; } && command -v locale >/dev/null 2>&1; then"
-        echo "    _utf8loc=\$(locale -a 2>/dev/null | grep -iE 'utf-?8' | head -n 1)"
-        echo "    [ -n \"\$_utf8loc\" ] && export LANG=\"\$_utf8loc\""
+        echo "if [ -n \"\${PREFIX:-}\" ] && { [ -z \"\${LC_ALL:-}\" ] || [ \"\$LC_ALL\" = 'C' ] || [ \"\$LC_ALL\" = 'POSIX' ]; } && { [ -z \"\${LANG:-}\" ] || [ \"\$LANG\" = 'C' ] || [ \"\$LANG\" = 'POSIX' ]; }; then"
+        echo "    export LC_ALL='C.UTF-8' LANG='C.UTF-8'"
         echo "fi"
         echo "source \$HOME/.local/share/blesh/ble.sh"
         echo "$BLE_END"
