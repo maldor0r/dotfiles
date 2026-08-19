@@ -486,8 +486,9 @@ if command -v lsd &> /dev/null; then
     fi
 
     # Opt-in: --with-nerd-font installs the font before the icon picker so the
-    # Nerd Font (Fancy) option can become the default.
-    if [ "$WITH_NERD_FONT" = "1" ] && ! $NERD_FOUND; then
+    # Nerd Font (Fancy) option can become the default. On Termux a Nerd Font
+    # only matters once it's present as ~/.termux/font.ttf.
+    if [ "$WITH_NERD_FONT" = "1" ] && { [ "$IS_TERMUX" = "1" ] && [ ! -f "$HOME/.termux/font.ttf" ] || ! $NERD_FOUND; }; then
         install_nerd_font
     fi
 
@@ -518,7 +519,7 @@ if command -v lsd &> /dev/null; then
 
     case "$ICON_CHOICE" in
         1)
-            if ! $NERD_FOUND; then
+            if { [ "$IS_TERMUX" = "1" ] && [ ! -f "$HOME/.termux/font.ttf" ]; } || { [ "$IS_TERMUX" != "1" ] && ! $NERD_FOUND; }; then
                 install_nerd_font
             fi
             mkdir -p "$HOME/.config/lsd"
@@ -569,78 +570,78 @@ fi
 
 echo "[INFO] Setting up ~/.bashrc..."
 
-# Only back up ~/.bashrc when we're actually going to modify it, so
-# re-running the installer doesn't pile up no-op backups.
-ADD_BLESH=false
-if [ "$BLESH_PRESENT" = true ] && ! grep -Fq "blesh/ble.sh" "$HOME/.bashrc" 2>/dev/null; then
-    ADD_BLESH=true
-fi
+# Self-healing managed blocks: we strip any blocks (new or legacy) that a
+# previous run wrote, then append the current ones. Re-runs converge to the
+# same content, so we never pile up duplicates and our latest user/locale
+# fixes always reach already-installed systems.
 
-ADD_DOTFILES=false
-if ! grep -Fq "source ${BASHRC_CUSTOM_ESCAPED}" "$HOME/.bashrc" 2>/dev/null; then
-    ADD_DOTFILES=true
-fi
+BLE_START="# ----- dotfiles: ble.sh (managed) -----"
+BLE_END="# ----- end dotfiles: ble.sh (managed) -----"
+DOT_START="# ----- dotfiles: custom (managed) -----"
+DOT_END="# ----- end dotfiles: custom (managed) -----"
 
-# Migrate installs that referenced the repo path directly: rewrite both the
-# `if [ -f ... ]` guard and the `source` line of an existing dotfiles block to
-# point at the new stable location, so a moved repo can't silently disable the
-# shell config.
-if [ "$ADD_DOTFILES" = true ] && grep -Eq "\.bashrc_custom" "$HOME/.bashrc" 2>/dev/null; then
-    OLD_BASHRC_BACKUP="$HOME/.bashrc.backup.$(date +%Y%m%d-%H%M)"
-    cp "$HOME/.bashrc" "$OLD_BASHRC_BACKUP" 2>/dev/null
-    sed -i "s|^if \[ -f .*\.bashrc_custom \]; then$|if [ -f ${BASHRC_CUSTOM} ]; then|; \
-            s|^ *source .*\.bashrc_custom$|    source ${BASHRC_CUSTOM}|" "$HOME/.bashrc"
-    if grep -Fq "source ${BASHRC_CUSTOM_ESCAPED}" "$HOME/.bashrc" 2>/dev/null; then
-        ADD_DOTFILES=false
-        echo "[OK] Migrated .bashrc to the new dotfiles location (backup: $OLD_BASHRC_BACKUP)."
-    fi
-fi
+BASHRC_FILE="$HOME/.bashrc"
+[ -f "$BASHRC_FILE" ] || touch "$BASHRC_FILE"
 
-if [ "$ADD_BLESH" = true ] || [ "$ADD_DOTFILES" = true ]; then
-    TIMESTAMP=$(date +%Y%m%d-%H%M)
-    if [ -f "$HOME/.bashrc" ]; then
-        echo "[OK] Existing .bashrc found."
-        cp "$HOME/.bashrc" "$HOME/.bashrc.backup.${TIMESTAMP}"
-        echo "[OK] Backup created: $HOME/.bashrc.backup.${TIMESTAMP}"
+STRIP="$HOME/.bashrc.doi.$$.s"
+STAGE="$HOME/.bashrc.doi.$$.n"
+trap 'rm -f "$STRIP" "$STAGE"' EXIT
+
+# strip_pattern: remove lines from an exact start line through an end line
+# (or, when the end is "FI", through the next bare "fi"). Idempotent.
+strip_pattern() {
+    local f="$1" s="$2" e="$3" t
+    t="$f.$$"
+    if [ "$e" = "FI" ]; then
+        awk -v s="$s" '$0==s{d=1;next} d&&$0=="fi"{d=0;next} !d{print}' "$f" > "$t"
     else
-        echo "[INFO] No existing .bashrc found."
-        touch "$HOME/.bashrc"
-        echo "[OK] Created new .bashrc."
+        awk -v s="$s" -v e="$e" '$0==s{d=1;next} d&&$0==e{d=0;next} !d{print}' "$f" > "$t"
     fi
-fi
+    mv "$t" "$f"
+}
 
-# Add ble.sh source if installed
-if [ "$ADD_BLESH" = true ]; then
+cp "$BASHRC_FILE" "$STRIP"
+strip_pattern "$STRIP" "$BLE_START" "$BLE_END"          # new ble block
+strip_pattern "$STRIP" "$DOT_START" "$DOT_END"          # new dotfiles block
+# shellcheck disable=SC2016  # literal text that must match the legacy block
+strip_pattern "$STRIP" "# Bash Line Editor (ble.sh)" 'source $HOME/.local/share/blesh/ble.sh'  # legacy ble
+strip_pattern "$STRIP" "# Load custom dotfiles configuration" "FI"                             # legacy dotfiles
+
+# Remove trailing blank lines left behind by stripping so a re-run is stable.
+awk '{ l[NR]=$0 } END { n=NR; while (n>0 && l[n]=="") n--; for (i=1;i<=n;i++) print l[i] }' "$STRIP" > "$STRIP.trim" && mv "$STRIP.trim" "$STRIP"
+
+cp "$STRIP" "$STAGE"
+{
     echo
-    echo "[INFO] Adding ble.sh to ~/.bashrc..."
-    {
+    echo "$DOT_START"
+    echo "# Load the custom shell configuration (stable location)"
+    echo "if [ -f ${BASHRC_CUSTOM_ESCAPED} ]; then"
+    echo "    source ${BASHRC_CUSTOM_ESCAPED}"
+    echo "fi"
+    echo "$DOT_END"
+    if [ "$BLESH_PRESENT" = true ]; then
         echo
-        echo "# Bash Line Editor (ble.sh)"
+        echo "$BLE_START"
         echo "if [ -z \"\${USER:-}\" ] && command -v id &> /dev/null; then export USER=\"\$(id -un)\"; fi"
         echo "if [ -n \"\${PREFIX:-}\" ] && { [ -z \"\${LANG:-}\" ] || [ \"\$LANG\" = 'C' ] || [ \"\$LANG\" = 'POSIX' ]; } && command -v locale >/dev/null 2>&1; then"
         echo "    _utf8loc=\$(locale -a 2>/dev/null | grep -iE 'utf-?8' | head -n 1)"
         echo "    [ -n \"\$_utf8loc\" ] && export LANG=\"\$_utf8loc\""
         echo "fi"
         echo "source \$HOME/.local/share/blesh/ble.sh"
-    } >> "$HOME/.bashrc"
-    echo "[OK] ble.sh added to ~/.bashrc."
-fi
+        echo "$BLE_END"
+    fi
+} >> "$STAGE"
 
-echo
-echo "[INFO] Checking if dotfiles are already configured..."
-
-if [ "$ADD_DOTFILES" = true ]; then
-    echo "[INFO] Adding dotfiles configuration..."
-    {
-        echo
-        echo "# Load custom dotfiles configuration"
-        echo "if [ -f ${BASHRC_CUSTOM_ESCAPED} ]; then"
-        echo "    source ${BASHRC_CUSTOM_ESCAPED}"
-        echo "fi"
-    } >> "$HOME/.bashrc"
-    echo "[OK] Configuration added."
+if cmp -s "$BASHRC_FILE" "$STAGE"; then
+    echo "[OK] ~/.bashrc is already up to date."
 else
-    echo "[OK] Dotfiles are already configured."
+    TIMESTAMP=$(date +%Y%m%d-%H%M)
+    if [ -s "$BASHRC_FILE" ]; then
+        cp "$BASHRC_FILE" "$HOME/.bashrc.backup.${TIMESTAMP}"
+        echo "[OK] Backup created: $HOME/.bashrc.backup.${TIMESTAMP}"
+    fi
+    cp "$STAGE" "$BASHRC_FILE"
+    echo "[OK] ~/.bashrc configured."
 fi
 
 echo
