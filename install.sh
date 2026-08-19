@@ -69,6 +69,43 @@ else
     IS_WSL=0
 fi
 
+# Termux's "C" locale is broken (Bionic setlocale), which makes ble.sh warn on
+# every shell load. The documented fix is libandroid-support. Offer to install
+# it (consent-gated); once installed, later runs skip the offer.
+termux_fix_locale() {
+    echo
+    echo "[WARN] Termux's 'C' locale is broken, which makes ble.sh warn on every shell."
+    echo "       Installing libandroid-support provides working locale support."
+    local answer="n"
+    if [ "$ASSUME_YES" = "1" ]; then
+        answer="y"
+        echo "       (-y given: installing)"
+    elif [ "$INTERACTIVE" = "1" ]; then
+        echo -n "       Install libandroid-support now? [y/N] "
+        IFS= read -r answer || answer=""
+    else
+        echo "       Non-interactive run: install it manually with: pkg install -y libandroid-support"
+        return 0
+    fi
+    case "${answer:-n}" in
+        y|Y|yes|Yes|YES)
+            echo "[INFO] Installing libandroid-support..."
+            if pkg install -y libandroid-support > /dev/null 2>&1; then
+                echo "[OK] libandroid-support installed."
+            else
+                echo "[WARN] Could not install libandroid-support (pkg install failed)."
+            fi
+            ;;
+        *)
+            echo "[INFO] Skipping. Install it yourself later: pkg install -y libandroid-support"
+            ;;
+    esac
+}
+
+if [ "$IS_TERMUX" = "1" ] && ! dpkg -s libandroid-support >/dev/null 2>&1; then
+    termux_fix_locale
+fi
+
 # Install everything into the current user's own directory — no sudo needed.
 LOCAL_BIN="$HOME/.local/bin"
 mkdir -p "$LOCAL_BIN"
