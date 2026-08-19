@@ -392,6 +392,34 @@ install_nerd_font() {
         echo "[WARN] unzip (or bsdtar/python3) is required to extract the font archive."
         rm -rf "$fonttmp"; return 0
     fi
+    if [ "$IS_TERMUX" = "1" ]; then
+        # Termux renders its terminal font from ~/.termux/font.ttf (it does not
+        # use fontconfig for display), so place a single Nerd Font TTF there.
+        mkdir -p "$HOME/.termux"
+        # Prefer the regular face; fall back to any TTF in the archive.
+        font_file=""
+        if [ -f "$fonttmp/JetBrainsMonoNerdFont-Regular.ttf" ]; then
+            font_file="$fonttmp/JetBrainsMonoNerdFont-Regular.ttf"
+        else
+            for f in "$fonttmp"/*.ttf; do
+                [ -f "$f" ] && { font_file="$f"; break; }
+            done
+        fi
+        if [ -z "$font_file" ]; then
+            echo "[WARN] Could not find a TTF to use as the Termux font."
+            rm -rf "$fonttmp"; return 0
+        fi
+        if cp -f "$font_file" "$HOME/.termux/font.ttf" 2>/dev/null; then
+            [ -f "$HOME/.termux/font.ttf" ] && NERD_FOUND=true
+            echo "[OK] JetBrainsMono Nerd Font installed as ~/.termux/font.ttf."
+            echo "     Restart the Termux app (or run 'termux-reload-settings') to apply it."
+        else
+            echo "[WARN] Could not copy the font to ~/.termux/font.ttf."
+        fi
+        rm -rf "$fonttmp"
+        return 0
+    fi
+
     mkdir -p "$HOME/.local/share/fonts"
     # Copy each font file explicitly and count successes. (A bare
     # `find ... -exec cp` cannot detect cp failures: find reports its own
@@ -441,6 +469,11 @@ if command -v lsd &> /dev/null; then
     if ! $NERD_FOUND; then
         find "$HOME/.fonts" "$HOME/.local/share/fonts" /usr/share/fonts /usr/local/share/fonts \
             -maxdepth 3 \( -iname "*nerd*" -o -iname "* nf*" -o -iname "*-nf*" \) 2>/dev/null | grep -q . && NERD_FOUND=true
+    fi
+    if ! $NERD_FOUND && [ "$IS_TERMUX" = "1" ] && [ -f "$HOME/.termux/font.ttf" ]; then
+        # Termux renders its terminal font from ~/.termux/font.ttf.
+        NERD_FOUND=true
+        echo "       ✓ Nerd Font found (Termux font)"
     fi
     if ! $NERD_FOUND && [ "$IS_WSL" = "1" ]; then
         # Windows user-installed fonts (per-user registration; all-users fonts
@@ -583,6 +616,7 @@ if [ "$ADD_BLESH" = true ]; then
     {
         echo
         echo "# Bash Line Editor (ble.sh)"
+        echo "if [ -z \"\${USER:-}\" ] && command -v id &> /dev/null; then export USER=\"\$(id -un)\"; fi"
         echo "source \$HOME/.local/share/blesh/ble.sh"
     } >> "$HOME/.bashrc"
     echo "[OK] ble.sh added to ~/.bashrc."
