@@ -17,7 +17,7 @@ fi
 # (common on Termux). Force Bionic's native UTF-8 C locale at runtime so the
 # warning goes away; a robust alternative for missing locale data is
 # `pkg install -y libandroid-support` plus generating a locale.
-if [ -n "${PREFIX:-}" ] && { [ -z "${LC_ALL:-}" ] || [ "$LC_ALL" = "C" ] || [ "$LC_ALL" = "POSIX" ]; }; then
+if [ -n "${PREFIX:-}" ] && [ -z "${LC_ALL:-}" ]; then
     export LC_ALL='C.UTF-8' LANG='C.UTF-8' LC_CTYPE='C.UTF-8'
 fi
 

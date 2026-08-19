@@ -663,9 +663,7 @@ cp "$STRIP" "$STAGE"
         echo
         echo "$BLE_START"
         echo "if [ -z \"\${USER:-}\" ] && command -v id &> /dev/null; then export USER=\"\$(id -un)\"; fi"
-        echo "if [ -n \"\${PREFIX:-}\" ] && { [ -z \"\${LC_ALL:-}\" ] || [ \"\$LC_ALL\" = 'C' ] || [ \"\$LC_ALL\" = 'POSIX' ]; }; then"
-        echo "    export LC_ALL='C.UTF-8' LANG='C.UTF-8' LC_CTYPE='C.UTF-8'"
-        echo "fi"
+        echo "if [ -n \"\${PREFIX:-}\" ] && [ -z \"\${LC_ALL:-}\" ]; then export LC_ALL='C.UTF-8' LANG='C.UTF-8' LC_CTYPE='C.UTF-8'; fi"
         echo "source \$HOME/.local/share/blesh/ble.sh"
         echo "$BLE_END"
     fi
