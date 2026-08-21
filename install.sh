@@ -669,7 +669,7 @@ cp "$STRIP" "$STAGE"
         echo "mkdir -p \"\$_blesh_tmp\" 2>/dev/null"
         echo "_blesh_err=\"\$_blesh_tmp/blesh.stderr.\$\$\""
         echo "source \$HOME/.local/share/blesh/ble.sh 2> \"\$_blesh_err\""
-        echo "grep -vE 'seems broken|please check the locale settings' \"\$_blesh_err\" 2>/dev/null >&2 || true; rm -f \"\$_blesh_err\""
+        echo "grep -vE 'seems broken|please check the locale settings|has an issue with its locale' \"\$_blesh_err\" 2>/dev/null >&2 || true; rm -f \"\$_blesh_err\""
         echo "$BLE_END"
     fi
 } >> "$STAGE"
