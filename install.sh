@@ -315,6 +315,22 @@ else
     fi
 fi
 
+# On Termux, ble.sh's broken-locale detection always fails (Bionic C locale is
+# broken, see termux-packages#23010) and it prints a notice on every attach that
+# cannot be hidden with a stderr redirect (ble.sh re-opens its saved stderr FD).
+# Patch the installed ble.sh so that notify-broken-locale returns immediately.
+# Only applied on Termux, and idempotent (skips if already patched).
+if [ "$IS_TERMUX" = "1" ] && $BLESH_PRESENT && [ -f "$BLESH_DIR/ble.sh" ]; then
+    if ! grep -q "notify-broken-locale { return 0; # \[dotfiles\]" "$BLESH_DIR/ble.sh" 2>/dev/null; then
+        if sed -i 's|^function ble/util/notify-broken-locale {$|function ble/util/notify-broken-locale { return 0; # [dotfiles] disable broken-locale notice|' "$BLESH_DIR/ble.sh" 2>/dev/null &&
+           grep -q "notify-broken-locale { return 0; # \[dotfiles\]" "$BLESH_DIR/ble.sh" 2>/dev/null; then
+            echo "[OK] Patched ble.sh to silence the broken-locale notice (Termux)."
+        else
+            echo "[WARN] Could not patch ble.sh (locale notice may still appear)."
+        fi
+    fi
+fi
+
 # ----------------------------------------------------------
 # starship prompt
 # ----------------------------------------------------------
@@ -664,12 +680,7 @@ cp "$STRIP" "$STAGE"
         echo "$BLE_START"
         echo "if [ -z \"\${USER:-}\" ] && command -v id &> /dev/null; then export USER=\"\$(id -un)\"; fi"
         echo "if [ -n \"\${PREFIX:-}\" ] && [ -z \"\${LC_ALL:-}\" ]; then export LC_ALL='C.UTF-8' LANG='C.UTF-8' LC_CTYPE='C.UTF-8'; fi"
-        echo "# hide ble.sh's one-time 'broken locale' notice (upstream Termux/bionic issue)"
-        echo "_blesh_tmp=\"\${TMPDIR:-\$HOME/.cache}\""
-        echo "mkdir -p \"\$_blesh_tmp\" 2>/dev/null"
-        echo "_blesh_err=\"\$_blesh_tmp/blesh.stderr.\$\$\""
-        echo "source \$HOME/.local/share/blesh/ble.sh 2> \"\$_blesh_err\""
-        echo "grep -vE 'seems broken|please check the locale settings|has an issue with its locale' \"\$_blesh_err\" 2>/dev/null >&2 || true; rm -f \"\$_blesh_err\""
+        echo "source \$HOME/.local/share/blesh/ble.sh"
         echo "$BLE_END"
     fi
 } >> "$STAGE"
