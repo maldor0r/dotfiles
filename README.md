@@ -91,6 +91,19 @@ When `lsd` is installed, the following aliases are available after installation:
 
 If `lsd` is not installed, basic fallback aliases are used for `ls`, `la`, `ll`, and `lla`.
 
+**Safe file-operation defaults** (interactive shells only) to guard against
+accidental overwrites and deletions — most useful while getting comfortable
+with Linux. Bypass anytime with `\cp`, `\mv`, `\rm`, or `\ln`:
+
+| Alias | Command | Description |
+|-------|---------|-------------|
+| `cp` | `cp -i` | Confirm before overwriting an existing file |
+| `mv` | `mv -i` | Confirm before overwriting an existing file |
+| `rm` | `rm -I` | Confirm once for 3+ files or any recursive delete |
+| `ln` | `ln -i` | Confirm before unlinking/replacing a link |
+
+These only affect interactive shells — scripts and the installer are untouched.
+
 </details>
 
 <details>

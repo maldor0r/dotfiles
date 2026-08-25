@@ -54,6 +54,17 @@ else
 fi
 
 # ----------------------------------------------------------
+# Safe file-operation defaults (interactive shells only)
+#   Protect against accidental overwrites/deletions while learning.
+#   Only affects interactive shells; scripts are untouched.
+#   Bypass anytime with \cp, \mv, \rm, \ln or command cp/mv/rm/ln.
+# ----------------------------------------------------------
+alias cp='cp -i'   # confirm before overwriting an existing file
+alias mv='mv -i'   # confirm before overwriting an existing file
+alias rm='rm -I'   # confirm once for 3+ files or any recursive delete
+alias ln='ln -i'   # confirm before unlinking/replacing a link
+
+# ----------------------------------------------------------
 # starship prompt
 # ----------------------------------------------------------
 
