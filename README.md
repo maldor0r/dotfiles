@@ -14,26 +14,6 @@ and let me get my environment back up in minutes on any machine.
 - **starship** prompt with pastel-powerline preset
 - Safe installation with automatic backups
 
-<details>
-<summary><h2 style="display: inline">Aliases</h2></summary>
-
-When `lsd` is installed, the following aliases are available after installation:
-
-| Alias | Command | Description |
-|-------|---------|-------------|
-| `ls` | `lsd --group-directories-first` | Basic listing, no hidden files |
-| `la` | `lsd -a --group-directories-first` | Basic listing, with hidden files |
-| `ll` | `lsd -l --group-directories-first` | Long listing, no hidden files |
-| `lla` | `lsd -la --group-directories-first` | Long listing, with hidden files |
-| `lt` | `lsd --tree --depth 3 --group-directories-first` | Tree view, no hidden files |
-| `lta` | `lsd -a --tree --depth 3 --group-directories-first` | Tree view, with hidden files |
-| `llt` | `lsd -l --tree --depth 3 --group-directories-first` | Tree + long, no hidden files |
-| `llta` | `lsd -la --tree --depth 3 --group-directories-first` | Tree + long, with hidden files |
-
-If `lsd` is not installed, basic fallback aliases are used for `ls`, `la`, `ll`, and `lla`.
-
-</details>
-
 ## Installation
 
 **Linux (Bash):**
@@ -93,7 +73,28 @@ sudo — it will never use sudo without your consent.
 
 </details>
 
-## Configuration
+<details open>
+<summary><h2 style="display: inline">Aliases</h2></summary>
+
+When `lsd` is installed, the following aliases are available after installation:
+
+| Alias | Command | Description |
+|-------|---------|-------------|
+| `ls` | `lsd --group-directories-first` | Basic listing, no hidden files |
+| `la` | `lsd -a --group-directories-first` | Basic listing, with hidden files |
+| `ll` | `lsd -l --group-directories-first` | Long listing, no hidden files |
+| `lla` | `lsd -la --group-directories-first` | Long listing, with hidden files |
+| `lt` | `lsd --tree --depth 3 --group-directories-first` | Tree view, no hidden files |
+| `lta` | `lsd -a --tree --depth 3 --group-directories-first` | Tree view, with hidden files |
+| `llt` | `lsd -l --tree --depth 3 --group-directories-first` | Tree + long, no hidden files |
+| `llta` | `lsd -la --tree --depth 3 --group-directories-first` | Tree + long, with hidden files |
+
+If `lsd` is not installed, basic fallback aliases are used for `ls`, `la`, `ll`, and `lla`.
+
+</details>
+
+<details>
+<summary><h2 style="display: inline">Configuration</h2></summary>
 
 Pre-configured templates are in `config/`:
 
@@ -102,6 +103,8 @@ Pre-configured templates are in `config/`:
 
 Copy the desired template to `~/.config/lsd/config.yaml` or `~/.config/starship.toml`,
 or re-run the installer.
+
+</details>
 
 ---
 
