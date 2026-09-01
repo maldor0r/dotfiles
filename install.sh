@@ -611,7 +611,8 @@ if command -v lsd &> /dev/null; then
         DEFAULT_CHOICE=1
     else
         echo "       ✗ Nerd Font not found"
-        echo "         1) Fancy icons (requires Nerd Font)"
+        echo "         1) Fancy icons (installs JetBrainsMono Nerd Font for you)"
+        echo "         Picking this will download & install the font automatically."
     fi
     echo "         2) Unicode icons (works on any terminal)"
     if $NERD_FOUND; then
@@ -776,8 +777,8 @@ echo
 # applicable on WSL (font lives on the Windows host) or Termux (~/.termux).
 if [ "$IS_WSL" != "1" ] && [ "$IS_TERMUX" != "1" ] && [ -d "$HOME/.local/share/fonts" ] && \
     ( find "$HOME/.local/share/fonts" -maxdepth 1 -iname "*[nN]erd*" 2>/dev/null | grep -q . ); then
-    echo "  \u2139 Tip: set your terminal font to JetBrainsMono Nerd Font for the"
-    echo "    powerline glyphs. (xfce4-terminal: Edit \u25b8 Preferences \u25b8 Appearance \u25b8 Font.)"
+    echo -e "\033[1;36m  \u2139 Tip: set your terminal font to JetBrainsMono Nerd Font for the powerline glyphs\033[0m"
+    echo -e "\033[1;36m          (xfce4-terminal: Edit \u25b8 Preferences \u25b8 Appearance \u25b8 Font.)\033[0m"
     echo
 fi
 echo
