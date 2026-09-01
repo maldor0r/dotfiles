@@ -123,6 +123,59 @@ echo "[INFO] Installing tools into your own user directory: $LOCAL_BIN"
 echo "       No sudo or system-wide changes are required."
 echo
 
+# ----------------------------------------------------------
+# ensure_tool <cmd> [pkg...]
+#   If a command is missing, install it via the system package manager.
+#   On Termux this uses pkg (no sudo). Elsewhere it is consent-gated and may
+#   use sudo. Returns 0 if the command is present afterwards, 1 otherwise.
+# ----------------------------------------------------------
+ensure_tool() {
+    local cmd="$1"; shift
+    local pkgs=("$@")
+    command -v "$cmd" &> /dev/null && return 0
+    local name="${pkgs[0]:-$cmd}"
+
+    if [ "$IS_TERMUX" = "1" ]; then
+        echo "[INFO] Installing ${name} with pkg (no sudo needed)..."
+        pkg install -y "${pkgs[@]:-$name}" > /dev/null 2>&1
+    elif [ "$ASSUME_YES" = "1" ]; then
+        echo "[INFO] -y given: installing ${name} with sudo..."
+        sudo_install "${pkgs[@]:-$name}"
+    elif [ "$INTERACTIVE" = "1" ]; then
+        echo -n "[WARN] ${name} is required but not installed. Install it now? (needs sudo) [y/N] "
+        IFS= read -r answer || answer=""
+        case "${answer:-n}" in
+            y|Y|yes|Yes|YES) sudo_install "${pkgs[@]:-$name}" ;;
+            *) echo "[INFO] Skipping. Install ${name} yourself, then re-run this script." ;;
+        esac
+    else
+        echo "[WARN] ${name} is required but not installed and running non-interactively."
+        echo "       Install it with: sudo ${name}      (or use -y to auto-install)"
+    fi
+
+    command -v "$cmd" &> /dev/null
+}
+
+# sudo_install <pkg...> — run the detected package manager with sudo.
+sudo_install() {
+    if command -v apt-get &> /dev/null; then
+        sudo apt-get update > /dev/null 2>&1
+        sudo apt-get install -y "$@" > /dev/null 2>&1
+    elif command -v dnf &> /dev/null; then
+        sudo dnf install -y "$@" > /dev/null 2>&1
+    elif command -v yum &> /dev/null; then
+        sudo yum install -y "$@" > /dev/null 2>&1
+    elif command -v pacman &> /dev/null; then
+        sudo pacman -S --noconfirm "$@" > /dev/null 2>&1
+    elif command -v zypper &> /dev/null; then
+        sudo zypper install -y "$@" > /dev/null 2>&1
+    elif command -v apk &> /dev/null; then
+        sudo apk add "$@" > /dev/null 2>&1
+    else
+        echo "[WARN] Unrecognized package manager. Install these manually: $*"
+    fi
+}
+
 DOTFILES_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 
 # Copy the custom shell config to a stable, repo-independent location so the
@@ -140,6 +193,7 @@ BASHRC_CUSTOM_ESCAPED=$(printf '%q' "$BASHRC_CUSTOM")
 
 if ! command -v lsd &> /dev/null; then
     echo "[INFO] Installing lsd..."
+    ensure_tool curl curl || true
     if [ "$IS_TERMUX" = "1" ]; then
         # Termux uses Android's bionic libc, so GitHub musl/glibc binaries
         # won't run. Install the Termux-native package instead.
@@ -337,6 +391,7 @@ fi
 
 if ! command -v starship &> /dev/null; then
     echo "[INFO] Installing starship..."
+    ensure_tool curl curl || true
     if [ "$IS_TERMUX" = "1" ]; then
         # Termux's bionic libc isn't covered by the GitHub musl/glibc release
         # assets, so keep the official installer there (it handles Termux).
@@ -715,6 +770,15 @@ elif [ "$SKIP_BLESH" = "1" ] || [ "$BLESH_SKIP" = "1" ] || [ ! -f "$BLESH_DIR/bl
 fi
 if command -v starship &> /dev/null; then
     echo "  ✅ starship ready with pastel-powerline preset"
+fi
+echo
+# Hint for the powerline glyphs: the terminal must use the Nerd Font. Not
+# applicable on WSL (font lives on the Windows host) or Termux (~/.termux).
+if [ "$IS_WSL" != "1" ] && [ "$IS_TERMUX" != "1" ] && [ -d "$HOME/.local/share/fonts" ] && \
+    ( find "$HOME/.local/share/fonts" -maxdepth 1 -iname "*[nN]erd*" 2>/dev/null | grep -q . ); then
+    echo "  \u2139 Tip: set your terminal font to JetBrainsMono Nerd Font for the"
+    echo "    powerline glyphs. (xfce4-terminal: Edit \u25b8 Preferences \u25b8 Appearance \u25b8 Font.)"
+    echo
 fi
 echo
 echo -e "\033[1;32m  \u25b6 To apply the changes, run: source ~/.bashrc\033[0m"
