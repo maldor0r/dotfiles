@@ -1,0 +1,145 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+# Plain (no Nerd Font) prompt for Linux virtual consoles and manual override.
+# ASCII separators only - no Powerline / Nerd / Private-Use-Area glyphs.
+
+format = """
+$username\
+ $directory\
+ $git_branch$git_status\
+ $c\
+$elixir\
+$elm\
+$golang\
+$gradle\
+$haskell\
+$java\
+$julia\
+$maven\
+$nodejs\
+$bun\
+$nim\
+$python\
+$rust\
+$scala\
+ $docker_context\
+ $time\
+\n\
+$character
+"""
+
+# Distro logos are Nerd icons - omit them in plain mode.
+[os]
+disabled = true
+
+[username]
+show_always = true
+style = "bg:#9A348E fg:#ffffff"
+format = '[$user ]($style)'
+
+[directory]
+style = "bg:#DA627D fg:#000000"
+format = '[ $path ]($style)'
+truncation_length = 3
+truncation_symbol = "…/"
+
+[git_branch]
+symbol = ""
+style = "bg:#FCA17D fg:#000000"
+format = '[ $branch ]($style)'
+
+[git_status]
+style = "bg:#FCA17D fg:#000000"
+format = '[$all_status$ahead_behind ]($style)'
+
+# Language/version modules: empty symbols, no Nerd glyphs - version text only.
+[c]
+symbol = ""
+style = "bg:#86BBD8 fg:#000000"
+format = '[ $version ]($style)'
+
+[elixir]
+symbol = ""
+style = "bg:#86BBD8 fg:#000000"
+format = '[ $version ]($style)'
+
+[elm]
+symbol = ""
+style = "bg:#86BBD8 fg:#000000"
+format = '[ $version ]($style)'
+
+[golang]
+symbol = ""
+style = "bg:#86BBD8 fg:#000000"
+format = '[ $version ]($style)'
+
+[gradle]
+symbol = ""
+style = "bg:#86BBD8 fg:#000000"
+format = '[ $version ]($style)'
+
+[haskell]
+symbol = ""
+style = "bg:#86BBD8 fg:#000000"
+format = '[ $version ]($style)'
+
+[java]
+symbol = ""
+style = "bg:#86BBD8 fg:#000000"
+format = '[ $version ]($style)'
+
+[julia]
+symbol = ""
+style = "bg:#86BBD8 fg:#000000"
+format = '[ $version ]($style)'
+
+[maven]
+symbol = ""
+style = "bg:#86BBD8 fg:#000000"
+format = '[ $version ]($style)'
+
+[nodejs]
+symbol = ""
+style = "bg:#86BBD8 fg:#000000"
+format = '[ $version ]($style)'
+
+[bun]
+symbol = ""
+style = "bg:#86BBD8 fg:#000000"
+format = '[ $version ]($style)'
+
+[nim]
+symbol = ""
+style = "bg:#86BBD8 fg:#000000"
+format = '[ $version ]($style)'
+
+[python]
+symbol = ""
+style = "bg:#86BBD8 fg:#000000"
+format = '[ $version ]($style)'
+
+[rust]
+symbol = ""
+style = "bg:#86BBD8 fg:#000000"
+format = '[ $version ]($style)'
+
+[scala]
+symbol = ""
+style = "bg:#86BBD8 fg:#000000"
+format = '[ $version ]($style)'
+
+[docker_context]
+symbol = ""
+style = "bg:#06969A fg:#ffffff"
+format = '[ $context ]($style)'
+
+[time]
+disabled = false
+time_format = "%R"
+style = "bg:#33658A fg:#ffffff"
+format = '[ $time ]($style)'
+
+# ASCII prompt character (no Nerd/typographic glyphs)
+[character]
+success_symbol = "[>](bold green)"
+error_symbol = "[>](bold red)"

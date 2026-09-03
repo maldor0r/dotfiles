@@ -672,6 +672,9 @@ if command -v starship &> /dev/null; then
     echo "[INFO] Configuring starship with pastel-powerline preset..."
     mkdir -p "$HOME/.config"
     cp "$DOTFILES_DIR/config/starship/starship.toml" "$HOME/.config/starship.toml"
+    # Plain (TTY / manual) starship config, next to the runtime dotfiles.
+    mkdir -p "$DOTFILES_CONFIG_DIR"
+    cp "$DOTFILES_DIR/config/starship/starship-plain.toml" "$DOTFILES_CONFIG_DIR/starship-plain.toml"
     echo "[OK] starship configuration applied."
     echo
 fi

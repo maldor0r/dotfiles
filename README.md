@@ -117,6 +117,15 @@ Pre-configured templates are in `config/`:
 Copy the desired template to `~/.config/lsd/config.yaml` or `~/.config/starship.toml`,
 or re-run the installer.
 
+**Plain prompt (Linux TTY):** On a raw virtual console (tty1/tty2/...) the Nerd
+Font isn't available, so the powerline glyphs can't render. The shell config
+automatically switches to `starship-plain.toml` (ASCII separators, no Nerd
+glyphs) there.
+
+- `dotfiles-plain` — switch the current shell to the plain prompt (press Enter)
+- `dotfiles-rich` — switch back to the rich Nerd Font prompt (press Enter)
+- `DOTFILES_PLAIN=1 bash` — force plain mode in any terminal
+
 </details>
 
 ---

@@ -66,8 +66,50 @@ alias ln='ln -i'   # confirm before unlinking/replacing a link
 
 # ----------------------------------------------------------
 # starship prompt
+#   - rich:  Nerd Font / Powerline (graphical terminals)
+#   - plain: ASCII separators, no Nerd glyphs (Linux virtual
+#            consoles, or forced with DOTFILES_PLAIN=1)
 # ----------------------------------------------------------
 
+# Locate the plain config: the installed copy next to this file,
+# falling back to the repo checkout.
+_dotfiles_plain_cfg="$HOME/.config/dotfiles/starship-plain.toml"
+if [ ! -f "$_dotfiles_plain_cfg" ]; then
+    _dotfiles_dir_cfg="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+    _dotfiles_plain_cfg="$_dotfiles_dir_cfg/starship-plain.toml"
+fi
+
+# Automatic detection: plain mode on a real Linux virtual console
+# (tty1/tty2/...) via $TTY or $TERM=linux, or forced by DOTFILES_PLAIN.
+_dotfiles_use_plain=0
+if [ -n "${DOTFILES_PLAIN:-}" ]; then
+    _dotfiles_use_plain=1
+elif [[ $TTY == /dev/tty[0-9]* ]] || [[ $TERM == linux* ]]; then
+    _dotfiles_use_plain=1
+elif command -v tty >/dev/null 2>&1 && [[ $(tty 2>/dev/null) == /dev/tty[0-9]* ]]; then
+    _dotfiles_use_plain=1
+fi
+
 if command -v starship &> /dev/null; then
+    if [ "$_dotfiles_use_plain" = 1 ]; then
+        export STARSHIP_CONFIG="$_dotfiles_plain_cfg"
+    else
+        unset STARSHIP_CONFIG
+    fi
     eval "$(starship init bash)"
 fi
+unset _dotfiles_use_plain _dotfiles_plain_cfg _dotfiles_dir_cfg
+
+# Temporary prompt toggles (current shell/session only).
+# Takes effect on the next prompt (press Enter). No new shell needed.
+dotfiles-plain() {
+    export DOTFILES_PLAIN=1
+    local cfg="$HOME/.config/dotfiles/starship-plain.toml"
+    [ -f "$cfg" ] || cfg="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)/starship-plain.toml"
+    export STARSHIP_CONFIG="$cfg"
+    eval "$(starship init bash)"
+}
+dotfiles-rich() {
+    unset DOTFILES_PLAIN STARSHIP_CONFIG
+    eval "$(starship init bash)"
+}
