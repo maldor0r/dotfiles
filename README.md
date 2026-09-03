@@ -118,12 +118,19 @@ Copy the desired template to `~/.config/lsd/config.yaml` or `~/.config/starship.
 or re-run the installer.
 
 **Plain prompt (Linux TTY):** On a raw virtual console (tty1/tty2/...) the Nerd
-Font isn't available, so the powerline glyphs can't render. The shell config
-automatically switches to `starship-plain.toml` (ASCII separators, no Nerd
-glyphs) there.
+Font isn't available, so powerline glyphs and Nerd icons can't render. The shell
+config automatically switches to a no-Nerd-Font mode there:
 
-- `dotfiles-plain` — switch the current shell to the plain prompt (press Enter)
-- `dotfiles-rich` — switch back to the rich Nerd Font prompt (press Enter)
+- Starship uses `starship-plain.toml` (ASCII separators, no Nerd glyphs)
+- `lsd` disables icons (`--icon never`) while keeping grouping, colors,
+  long listings, hidden files, sorting, etc.
+
+`~/.config/lsd/config.yaml` and `~/.config/starship.toml` are left untouched on
+disk - the switch happens at the shell level.
+
+- `dotfiles-plain` — switch the current shell to plain mode (Starship + lsd)
+- `dotfiles-rich` — switch back to the rich Nerd Font prompt and lsd icons
+  (both take effect on the next press of Enter)
 - `DOTFILES_PLAIN=1 bash` — force plain mode in any terminal
 
 </details>

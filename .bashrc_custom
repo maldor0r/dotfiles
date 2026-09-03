@@ -34,17 +34,34 @@ fi
 
 # ----------------------------------------------------------
 # lsd aliases (with fallback if lsd is not installed)
+#   Defined via a helper so plain/rich mode can flip icon behavior
+#   without touching ~/.config/lsd/config.yaml.
+#   Rich:  lsd --group-directories-first
+#   Plain: lsd --icon never --group-directories-first
 # ----------------------------------------------------------
 
+_dotfiles_lsd_set() {
+    local icon="$1"   # "" for rich, "--icon never " for plain; inserted right after lsd
+    # shellcheck disable=SC2139  # expand the mode string when (re)defining
+    alias ls="lsd ${icon}--group-directories-first"
+    # shellcheck disable=SC2139
+    alias la="lsd ${icon}-a --group-directories-first"
+    # shellcheck disable=SC2139
+    alias ll="lsd ${icon}-l --group-directories-first"
+    # shellcheck disable=SC2139
+    alias lla="lsd ${icon}-la --group-directories-first"
+    # shellcheck disable=SC2139
+    alias lt="lsd ${icon}--tree --depth 3 --group-directories-first"
+    # shellcheck disable=SC2139
+    alias lta="lsd ${icon}-a --tree --depth 3 --group-directories-first"
+    # shellcheck disable=SC2139
+    alias llt="lsd ${icon}-l --tree --depth 3 --group-directories-first"
+    # shellcheck disable=SC2139
+    alias llta="lsd ${icon}-la --tree --depth 3 --group-directories-first"
+}
+
 if command -v lsd &> /dev/null; then
-    alias ls='lsd --group-directories-first'          # basic, no hidden
-    alias la='lsd -a --group-directories-first'        # basic, with hidden
-    alias ll='lsd -l --group-directories-first'        # long, no hidden
-    alias lla='lsd -la --group-directories-first'      # long, with hidden
-    alias lt='lsd --tree --depth 3 --group-directories-first'   # tree, no hidden
-    alias lta='lsd -a --tree --depth 3 --group-directories-first' # tree, with hidden
-    alias llt='lsd -l --tree --depth 3 --group-directories-first' # tree + long, no hidden
-    alias llta='lsd -la --tree --depth 3 --group-directories-first' # tree + long, with hidden
+    _dotfiles_lsd_set ""
 else
     # Fallback aliases using standard ls
     alias ls='ls --color=auto'
@@ -90,6 +107,13 @@ elif command -v tty >/dev/null 2>&1 && [[ $(tty 2>/dev/null) == /dev/tty[0-9]* ]
     _dotfiles_use_plain=1
 fi
 
+# Apply plain mode to lsd first (independent of StarShip). In rich mode
+# the default aliases (set above) are already correct, so only re-set here
+# when plain is active.
+if [ "$_dotfiles_use_plain" = 1 ] && command -v lsd &> /dev/null; then
+    _dotfiles_lsd_set "--icon never "
+fi
+
 if command -v starship &> /dev/null; then
     if [ "$_dotfiles_use_plain" = 1 ]; then
         export STARSHIP_CONFIG="$_dotfiles_plain_cfg"
@@ -102,14 +126,19 @@ unset _dotfiles_use_plain _dotfiles_plain_cfg _dotfiles_dir_cfg
 
 # Temporary prompt toggles (current shell/session only).
 # Takes effect on the next prompt (press Enter). No new shell needed.
+# Switches BOTH Starship and lsd icon behavior.
 dotfiles-plain() {
     export DOTFILES_PLAIN=1
     local cfg="$HOME/.config/dotfiles/starship-plain.toml"
     [ -f "$cfg" ] || cfg="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)/starship-plain.toml"
+    command -v lsd &> /dev/null && _dotfiles_lsd_set "--icon never "
+    command -v starship &> /dev/null || return 0
     export STARSHIP_CONFIG="$cfg"
     eval "$(starship init bash)"
 }
 dotfiles-rich() {
     unset DOTFILES_PLAIN STARSHIP_CONFIG
+    command -v lsd &> /dev/null && _dotfiles_lsd_set ""
+    command -v starship &> /dev/null || return 0
     eval "$(starship init bash)"
 }
