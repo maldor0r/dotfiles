@@ -740,6 +740,27 @@ if [ "$DOTFILES_SHELL" = "fish" ] && command -v fish &> /dev/null; then
     else
         echo "[WARN] Fish integration file missing: $FISH_SRC"
     fi
+
+    # eza-based ls functions as autoloadable files. The user functions dir is
+    # first in fish_function_path, so these override any system/distro
+    # autoloaded definitions (e.g. CachyOS ls.fish). Only our managed files
+    # are written; other user functions are never touched.
+    FISH_FN_SRC="$DOTFILES_DIR/config/fish/functions"
+    if [ -d "$FISH_FN_SRC" ]; then
+        FISH_FN_DIR="$HOME/.config/fish/functions"
+        mkdir -p "$FISH_FN_DIR"
+        cp -f "$FISH_FN_SRC"/ls.fish   "$FISH_FN_DIR/ls.fish"
+        cp -f "$FISH_FN_SRC"/la.fish   "$FISH_FN_DIR/la.fish"
+        cp -f "$FISH_FN_SRC"/ll.fish   "$FISH_FN_DIR/ll.fish"
+        cp -f "$FISH_FN_SRC"/lla.fish  "$FISH_FN_DIR/lla.fish"
+        cp -f "$FISH_FN_SRC"/lt.fish   "$FISH_FN_DIR/lt.fish"
+        cp -f "$FISH_FN_SRC"/lta.fish  "$FISH_FN_DIR/lta.fish"
+        cp -f "$FISH_FN_SRC"/llt.fish  "$FISH_FN_DIR/llt.fish"
+        cp -f "$FISH_FN_SRC"/llta.fish "$FISH_FN_DIR/llta.fish"
+        echo "[OK] Fish ls functions installed."
+    else
+        echo "[WARN] Fish function files missing: $FISH_FN_SRC"
+    fi
     echo
 fi
 

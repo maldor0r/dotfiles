@@ -2,15 +2,17 @@
 # dotfiles - managed Fish integration
 #
 # Managed by install.sh - this file is safe to delete and is
-# regenerated on every install run. The "99-" prefix ensures it
-# is loaded last, so these definitions take precedence over any
-# system/distro defaults (e.g. CachyOS ls/la/ll/lt functions).
+# regenerated on every install run. Loaded as part of fish's
+# conf.d startup.
 #
-# Provides:
-#   - eza-based ls/la/ll/lla/lt/lta/llt/llta (same semantics as
-#     the Bash/lsd aliases)
+# Responsibilities:
+#   - rich/plain terminal mode detection (Linux virtual TTYs)
+#   - _dotfiles_eza_icons global consumed by the eza functions
 #   - Starship prompt via native fish init
-#   - rich/plain terminal mode (Linux virtual TTYs)
+#   - dotfiles-plain / dotfiles-rich session toggles
+#
+# The eza-based ls/la/ll/lla/lt/lta/llt/llta are autoloadable
+# function files installed to ~/.config/fish/functions/.
 #
 # Fish has its own line editor - ble.sh stays Bash-only and is
 # never loaded here.
@@ -39,57 +41,27 @@ if not test -f "$__dotfiles_plain_cfg"
     set -g __dotfiles_plain_cfg "$here/../../starship/starship-plain.toml"
 end
 
-# eza icons flag: "" (rich, default auto) or "--icons=never" (plain).
-set -g _dotfiles_eza_icons ''
+# eza icons flag: "--icons=never" in plain mode; in rich mode the variable is
+# left UNSET so `eza $_dotfiles_eza_icons ...` expands to zero arguments (an
+# empty string would pass a spurious empty argument to eza).
 if test "$__dotfiles_use_plain" -eq 1
     set -g _dotfiles_eza_icons '--icons=never'
     set -gx STARSHIP_CONFIG "$__dotfiles_plain_cfg"
 else
+    set -eg _dotfiles_eza_icons
     set -eg STARSHIP_CONFIG
 end
 
-# ----------------------------------------------------------
-# eza-based ls functions.
-#   Override any existing definitions (e.g. CachyOS) so ours win.
-#   Only defined when eza is available; otherwise the shell's
-#   default ls is left untouched.
-# ----------------------------------------------------------
-
-if command -q eza
-    functions -q ls;  and functions -e ls 2>/dev/null
-    functions -q la;  and functions -e la 2>/dev/null
-    functions -q ll;  and functions -e ll 2>/dev/null
-    functions -q lla; and functions -e lla 2>/dev/null
-    functions -q lt;  and functions -e lt 2>/dev/null
-    functions -q lta; and functions -e lta 2>/dev/null
-    functions -q llt; and functions -e llt 2>/dev/null
-    functions -q llta; and functions -e llta 2>/dev/null
-
-    function ls --wraps=eza
-        eza $_dotfiles_eza_icons --group-directories-first $argv
-    end
-    function la --wraps=eza
-        eza $_dotfiles_eza_icons -a --group-directories-first $argv
-    end
-    function ll --wraps=eza
-        eza $_dotfiles_eza_icons -l --group-directories-first $argv
-    end
-    function lla --wraps=eza
-        eza $_dotfiles_eza_icons -la --group-directories-first $argv
-    end
-    function lt --wraps=eza
-        eza $_dotfiles_eza_icons --tree --level=3 --group-directories-first $argv
-    end
-    function lta --wraps=eza
-        eza $_dotfiles_eza_icons -a --tree --level=3 --group-directories-first $argv
-    end
-    function llt --wraps=eza
-        eza $_dotfiles_eza_icons -l --tree --level=3 --group-directories-first $argv
-    end
-    function llta --wraps=eza
-        eza $_dotfiles_eza_icons -la --tree --level=3 --group-directories-first $argv
-    end
-end
+# eza-based ls/la/ll/lla/lt/lta/llt/llta are provided as autoloadable
+# function files installed into the user functions dir
+# (~/.config/fish/functions/), which is first in fish_function_path. That
+# makes them override any system/distro autoloaded definitions (e.g. CachyOS
+# ls.fish) - defining functions here in conf.d would NOT win against a
+# system autoload file, since fish autoloads the file on first use and it
+# replaces an in-memory definition.
+#
+# This file handles: rich/plain detection, the _dotfiles_eza_icons global,
+# Starship init, and the dotfiles-plain / dotfiles-rich toggles.
 
 # ----------------------------------------------------------
 # Starship prompt (native Fish initialization).
@@ -112,7 +84,7 @@ end
 
 function dotfiles-rich
     set -eg DOTFILES_PLAIN
-    set -g _dotfiles_eza_icons ''
+    set -eg _dotfiles_eza_icons
     set -eg STARSHIP_CONFIG
     command -q starship; and starship init fish | source
 end
