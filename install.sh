@@ -761,6 +761,67 @@ if [ "$DOTFILES_SHELL" = "fish" ] && command -v fish &> /dev/null; then
     else
         echo "[WARN] Fish function files missing: $FISH_FN_SRC"
     fi
+
+    # Some distros (e.g. CachyOS) define ls/la/ll/... as in-memory functions
+    # during fish startup (system conf.d / config.fish). In-memory definitions
+    # beat autoload files, so our autoloaded functions above would not win.
+    # config.fish from the user config dir is sourced LAST in fish's startup
+    # order, so we append a managed block there that re-sources our function
+    # files - this decisively overrides any distro in-memory definitions.
+    #
+    # The block is marker-delimited and replaced in place on re-runs (like the
+    # .bashrc handling); other user content in config.fish is preserved.
+    FISH_CFG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/fish/config.fish"
+    FISH_CFG_START="# >>> dotfiles fish functions >>>"
+    FISH_CFG_END="# <<< dotfiles fish functions <<<"
+    FISH_CFG_TMP="$HOME/.config/fish/config.fish.$$"
+    mkdir -p "$(dirname "$FISH_CFG_FILE")"
+    [ -f "$FISH_CFG_FILE" ] || : > "$FISH_CFG_FILE"
+
+    # Strip any previously managed block. To guarantee we never delete
+    # unrelated user content (even with a stray/orphaned start marker left by
+    # manual edits), we only remove the LAST start-marker -> LAST end-marker
+    # region when a well-formed trailing block exists. Anything earlier in the
+    # file is preserved untouched.
+    awk -v s="$FISH_CFG_START" -v e="$FISH_CFG_END" '
+        $0==s{ls=NR} $0==e{le=NR} {l[NR]=$0}
+        END{
+            if (!(le && ls && le > ls)) { for(i=1;i<=NR;i++) print l[i]; exit }
+            for (i=1;i<=NR;i++) {
+                if (i==ls) { d=1; continue }
+                if (i==le) { d=0; continue }
+                if (!d) print l[i]
+            }
+        }' "$FISH_CFG_FILE" > "$FISH_CFG_TMP"
+    # Trim trailing blank lines so re-runs are stable.
+    awk '{ l[NR]=$0 } END { n=NR; while (n>0 && l[n]=="") n--; for (i=1;i<=n;i++) print l[i] }' \
+        "$FISH_CFG_TMP" > "$FISH_CFG_TMP.trim" && mv "$FISH_CFG_TMP.trim" "$FISH_CFG_TMP"
+
+    {
+        cat "$FISH_CFG_TMP"
+        printf '\n%s\n' "$FISH_CFG_START"
+        echo "# Managed by install.sh. Redefines the dotfiles ls functions after"
+        echo "# any system/distro startup definitions (e.g. CachyOS), so ours win."
+        echo 'for __dotfiles_fn in ls la ll lla lt lta llt llta'
+        # shellcheck disable=SC2016  # literal "$__fish_config_dir" goes into config.fish
+        echo '    if test -f "$__fish_config_dir/functions/$__dotfiles_fn.fish"'
+        # shellcheck disable=SC2016
+        echo '        source "$__fish_config_dir/functions/$__dotfiles_fn.fish"'
+        echo '    end'
+        echo 'end'
+        printf '%s\n' "$FISH_CFG_END"
+    } > "$FISH_CFG_TMP.new"
+
+    if cmp -s "$FISH_CFG_FILE" "$FISH_CFG_TMP.new"; then
+        echo "[OK] Fish config.fish is already up to date."
+    else
+        TIMESTAMP=$(date +%Y%m%d-%H%M)
+        cp "$FISH_CFG_FILE" "$FISH_CFG_FILE.backup.${TIMESTAMP}"
+        cp "$FISH_CFG_TMP.new" "$FISH_CFG_FILE"
+        echo "[OK] config.fish updated (ls function override)."
+        echo "    Backup: $FISH_CFG_FILE.backup.${TIMESTAMP}"
+    fi
+    rm -f "$FISH_CFG_TMP" "$FISH_CFG_TMP.new"
     echo
 fi
 
