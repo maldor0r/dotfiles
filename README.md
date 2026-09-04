@@ -8,19 +8,23 @@ and let me get my environment back up in minutes on any machine.
 
 ## Features
 
-- Custom shell configuration
-- `lsd` aliases with icon configuration
-- `ble.sh` (Bash Line Editor) with syntax highlighting and autocomplete
+- Custom shell configuration for **Bash** and **Fish**
+- Bash: `lsd` aliases + `ble.sh` line editor
+- Fish: `eza` aliases + native line editing
 - **starship** prompt with pastel-powerline preset
+- Rich/plain mode for Linux virtual TTYs (no Nerd Font needed)
 - Safe installation with automatic backups
 
 ## Installation
 
-**Linux (Bash):**
+**Linux (Bash or Fish):**
 
 ```bash
 git clone https://github.com/maldor0r/dotfiles && cd dotfiles && ./install.sh
 ```
+
+The installer detects which shells you have and configures each one
+(Bash wiring into `~/.bashrc`, Fish into `~/.config/fish/conf.d/`).
 
 **Windows (PowerShell):**
 
@@ -76,7 +80,7 @@ sudo — it will never use sudo without your consent.
 <details open>
 <summary><h2 style="display: inline">Aliases</h2></summary>
 
-When `lsd` is installed, the following aliases are available after installation:
+**Bash (`lsd`):** when `lsd` is installed, the following aliases are available:
 
 | Alias | Command | Description |
 |-------|---------|-------------|
@@ -90,6 +94,22 @@ When `lsd` is installed, the following aliases are available after installation:
 | `llta` | `lsd -la --tree --depth 3 --group-directories-first` | Tree + long, with hidden files |
 
 If `lsd` is not installed, basic fallback aliases are used for `ls`, `la`, `ll`, and `lla`.
+
+**Fish (`eza`):** the same semantics are provided as Fish functions using `eza`
+(replacing any distro/system defaults, e.g. CachyOS):
+
+| Alias | Command | Description |
+|-------|---------|-------------|
+| `ls` | `eza --group-directories-first` | Basic listing, no hidden files |
+| `la` | `eza -a --group-directories-first` | Basic listing, with hidden files |
+| `ll` | `eza -l --group-directories-first` | Long listing, no hidden files |
+| `lla` | `eza -la --group-directories-first` | Long listing, with hidden files |
+| `lt` | `eza --tree --level=3 --group-directories-first` | Tree view, no hidden files |
+| `lta` | `eza -a --tree --level=3 --group-directories-first` | Tree view, with hidden files |
+| `llt` | `eza -l --tree --level=3 --group-directories-first` | Tree + long, no hidden files |
+| `llta` | `eza -la --tree --level=3 --group-directories-first` | Tree + long, with hidden files |
+
+If `eza` is not installed, Fish keeps its built-in `ls`.
 
 **Safe file-operation defaults** (interactive shells only) to guard against
 accidental overwrites and deletions — most useful while getting comfortable
@@ -117,21 +137,26 @@ Pre-configured templates are in `config/`:
 Copy the desired template to `~/.config/lsd/config.yaml` or `~/.config/starship.toml`,
 or re-run the installer.
 
-**Plain prompt (Linux TTY):** On a raw virtual console (tty1/tty2/...) the Nerd
-Font isn't available, so powerline glyphs and Nerd icons can't render. The shell
+**Plain mode (Linux TTY):** On a raw virtual console (tty1/tty2/...) the Nerd
+Font isn't available, so powerline glyphs and file icons can't render. The shell
 config automatically switches to a no-Nerd-Font mode there:
 
 - Starship uses `starship-plain.toml` (ASCII separators, no Nerd glyphs)
-- `lsd` disables icons (`--icon never`) while keeping grouping, colors,
-  long listings, hidden files, sorting, etc.
+- Bash `lsd` disables icons (`--icon never`), Fish `eza` disables icons
+  (`--icons=never`) — grouping, colors, long listings, hidden files, sorting, etc. remain
 
-`~/.config/lsd/config.yaml` and `~/.config/starship.toml` are left untouched on
-disk - the switch happens at the shell level.
+`~/.config/lsd/config.yaml`, `~/.config/starship.toml` and the Fish functions are
+all configured at the shell level; nothing on disk is rewritten when switching.
 
-- `dotfiles-plain` — switch the current shell to plain mode (Starship + lsd)
-- `dotfiles-rich` — switch back to the rich Nerd Font prompt and lsd icons
+Works the same in **Bash** and **Fish**:
+
+- `dotfiles-plain` — switch the current shell to plain mode (Starship + no icons)
+- `dotfiles-rich` — switch back to the rich Nerd Font prompt and icons
   (both take effect on the next press of Enter)
-- `DOTFILES_PLAIN=1 bash` — force plain mode in any terminal
+- `DOTFILES_PLAIN=1 bash` / `DOTFILES_PLAIN=1 fish` — force plain mode in any terminal
+
+Note: Fish uses its own line editor — `ble.sh` is Bash-only and is never loaded
+by Fish.
 
 </details>
 

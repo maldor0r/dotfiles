@@ -109,6 +109,40 @@ if [ "$IS_TERMUX" = "1" ] && [ ! -f "$HOME/.config/dotfiles/.locale_fix_asked" ]
     termux_fix_locale
 fi
 
+# ----------------------------------------------------------
+# Detect the shell this installer should configure.
+#
+#   Priority: the shell that actually launched this script
+#   (the parent process) over the configured login shell
+#   ($SHELL). This is deliberate: a user whose login shell is
+#   Fish but who runs ./install.sh from Bash, or vice versa,
+#   should get the shell they are actually using - not the one
+#   that happens to be installed or set as $SHELL.
+#
+#   Fallbacks / defaults:
+#     - unknown/other parent (e.g. zsh) defaults to Bash, the
+#       traditional target of this repo
+#     - Termux defaults to Bash
+# ----------------------------------------------------------
+DOTFILES_SHELL=""
+if command -v ps >/dev/null 2>&1; then
+    _parent_comm="$(ps -o comm= -p "$PPID" 2>/dev/null | tr -d '[:space:]')"
+    case "$_parent_comm" in
+        *fish*) DOTFILES_SHELL=fish ;;
+        *bash*|*sh*) DOTFILES_SHELL=bash ;;
+    esac
+fi
+if [ -z "$DOTFILES_SHELL" ] && [ -n "$SHELL" ]; then
+    case "$SHELL" in
+        *fish*) DOTFILES_SHELL=fish ;;
+        *bash*|*sh) DOTFILES_SHELL=bash ;;
+    esac
+fi
+DOTFILES_SHELL="${DOTFILES_SHELL:-bash}"
+unset _parent_comm
+
+echo "[INFO] Configuring for shell: $DOTFILES_SHELL"
+
 # Install everything into the current user's own directory — no sudo needed.
 LOCAL_BIN="$HOME/.local/bin"
 mkdir -p "$LOCAL_BIN"
@@ -188,10 +222,10 @@ cp -f "$DOTFILES_DIR/.bashrc_custom" "$BASHRC_CUSTOM"
 BASHRC_CUSTOM_ESCAPED=$(printf '%q' "$BASHRC_CUSTOM")
 
 # ----------------------------------------------------------
-# lsd
+# lsd  (Bash only)
 # ----------------------------------------------------------
 
-if ! command -v lsd &> /dev/null; then
+if [ "$DOTFILES_SHELL" = "bash" ] && ! command -v lsd &> /dev/null; then
     echo "[INFO] Installing lsd..."
     ensure_tool curl curl || true
     if [ "$IS_TERMUX" = "1" ]; then
@@ -251,25 +285,28 @@ if ! command -v lsd &> /dev/null; then
 fi
 
 # ----------------------------------------------------------
-# ble.sh — Bash Line Editor
+# ble.sh — Bash Line Editor  (Bash only)
 # ----------------------------------------------------------
 
 BLESH_DIR="$HOME/.local/share/blesh"
 BLESH_PRESENT=false
 
-# Termux may not have /tmp; use a temp dir inside the user's home there.
-if [ "$IS_TERMUX" = "1" ]; then
-    BLESH_TMP="$HOME/.cache/blesh-build"
+if [ "$DOTFILES_SHELL" != "bash" ]; then
+    echo "[INFO] Skipping ble.sh (Bash-only; detected shell: $DOTFILES_SHELL)."
 else
-    BLESH_TMP="/tmp/ble.sh"
-fi
+    # Termux may not have /tmp; use a temp dir inside the user's home there.
+    if [ "$IS_TERMUX" = "1" ]; then
+        BLESH_TMP="$HOME/.cache/blesh-build"
+    else
+        BLESH_TMP="/tmp/ble.sh"
+    fi
 
-if [ -f "$BLESH_DIR/ble.sh" ]; then
-    BLESH_PRESENT=true
-elif [ "$SKIP_BLESH" = "1" ]; then
-    echo "[INFO] Skipping ble.sh (--skip-blesh)."
-else
-    echo "[INFO] Installing ble.sh (Bash Line Editor)..."
+    if [ -f "$BLESH_DIR/ble.sh" ]; then
+        BLESH_PRESENT=true
+    elif [ "$SKIP_BLESH" = "1" ]; then
+        echo "[INFO] Skipping ble.sh (--skip-blesh)."
+    else
+        echo "[INFO] Installing ble.sh (Bash Line Editor)..."
 
     # ble.sh must be compiled with make and gawk, which may not be present.
     # On normal Linux this needs sudo; on Termux packages install user-local
@@ -367,6 +404,7 @@ else
             echo "         https://github.com/akinomyoga/ble.sh"
         fi
     fi
+    fi  # end DOTFILES_SHELL=bash guard
 fi
 
 # On Termux, ble.sh's broken-locale detection always fails (Bionic C locale is
@@ -563,10 +601,10 @@ install_nerd_font() {
 }
 
 # ----------------------------------------------------------
-# Configure lsd icons
+# Configure lsd icons  (Bash only)
 # ----------------------------------------------------------
 
-if command -v lsd &> /dev/null; then
+if [ "$DOTFILES_SHELL" = "bash" ] && command -v lsd &> /dev/null; then
     echo
     echo "[INFO] Configuring lsd icons..."
 
@@ -680,10 +718,39 @@ if command -v starship &> /dev/null; then
 fi
 
 # ----------------------------------------------------------
-# Shell setup
+# Fish shell  (Fish only)
 # ----------------------------------------------------------
 
-echo "[INFO] Setting up ~/.bashrc..."
+if [ "$DOTFILES_SHELL" = "fish" ] && command -v fish &> /dev/null; then
+    echo "[INFO] Configuring Fish..."
+    # Fish uses eza (not lsd) for the ls aliases. Avoid a hard dependency:
+    # try to install it with the user's package manager (consent-gated, same
+    # as curl above); if it stays missing, the Fish config degrades gracefully
+    # (it simply leaves the shell's default ls alone).
+    ensure_tool eza eza || true
+
+    FISH_SRC="$DOTFILES_DIR/config/fish/conf.d/99-dotfiles.fish"
+    if [ -f "$FISH_SRC" ]; then
+        FISH_CONF_DIR="$HOME/.config/fish/conf.d"
+        mkdir -p "$FISH_CONF_DIR"
+        # Fixed filename => re-runs stay idempotent (no duplication), and the
+        # user's config.fish / other conf.d files are never touched.
+        cp -f "$FISH_SRC" "$FISH_CONF_DIR/99-dotfiles.fish"
+        echo "[OK] Fish configuration installed."
+    else
+        echo "[WARN] Fish integration file missing: $FISH_SRC"
+    fi
+    echo
+fi
+
+# ----------------------------------------------------------
+# Shell setup  (Bash only)
+# ----------------------------------------------------------
+
+if [ "$DOTFILES_SHELL" != "bash" ]; then
+    echo "[INFO] Skipping ~/.bashrc setup (detected shell: $DOTFILES_SHELL)."
+else
+    echo "[INFO] Setting up ~/.bashrc..."
 
 # Self-healing managed blocks: we strip any blocks (new or legacy) that a
 # previous run wrote, then append the current ones. Re-runs converge to the
@@ -755,6 +822,7 @@ else
     cp "$STAGE" "$BASHRC_FILE"
     echo "[OK] ~/.bashrc configured."
 fi
+fi  # end DOTFILES_SHELL=bash guard
 
 echo
 echo "========================================="
@@ -762,18 +830,21 @@ echo "         Setup Complete"
 echo "========================================="
 echo
 echo "  ✅ Dotfiles configured"
-if command -v lsd &> /dev/null; then
+if [ "$DOTFILES_SHELL" = "bash" ] && command -v lsd &> /dev/null; then
     echo "  ✅ lsd ready with icons"
-else
+elif [ "$DOTFILES_SHELL" = "bash" ]; then
     echo "  ⚠️  lsd not installed — using basic ls aliases"
 fi
 if [ "$BLESH_PRESENT" = true ]; then
     echo "  ✅ ble.sh ready"
-elif [ "$SKIP_BLESH" = "1" ] || [ "$BLESH_SKIP" = "1" ] || [ ! -f "$BLESH_DIR/ble.sh" ]; then
+elif [ "$DOTFILES_SHELL" = "bash" ] && { [ "$SKIP_BLESH" = "1" ] || [ "$BLESH_SKIP" = "1" ] || [ ! -f "$BLESH_DIR/ble.sh" ]; }; then
     echo "  ⚠️  ble.sh NOT installed — install make+gawk, then re-run (or use -y)"
 fi
 if command -v starship &> /dev/null; then
     echo "  ✅ starship ready with pastel-powerline preset"
+fi
+if [ "$DOTFILES_SHELL" = "fish" ] && command -v fish &> /dev/null; then
+    echo "  ✅ fish ready (eza aliases + starship)"
 fi
 echo
 # Hint for the powerline glyphs: the terminal must use the Nerd Font. Not
@@ -785,5 +856,9 @@ if [ "$IS_WSL" != "1" ] && [ "$IS_TERMUX" != "1" ] && [ -d "$HOME/.local/share/f
     echo
 fi
 echo
-echo -e "\033[1;32m  \u25b6 To apply the changes, run: source ~/.bashrc\033[0m"
-echo -e "\033[1;32m    or open a new terminal.\033[0m"
+if [ "$DOTFILES_SHELL" = "fish" ]; then
+    echo -e "\033[1;32m  \u25b6 To apply the changes, open a new Fish shell.\033[0m"
+else
+    echo -e "\033[1;32m  \u25b6 To apply the changes, run: source ~/.bashrc\033[0m"
+    echo -e "\033[1;32m    or open a new terminal.\033[0m"
+fi
