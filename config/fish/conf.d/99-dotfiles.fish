@@ -41,14 +41,14 @@ if not test -f "$__dotfiles_plain_cfg"
     set -g __dotfiles_plain_cfg "$here/../../starship/starship-plain.toml"
 end
 
-# eza icons flag: "--icons=never" in plain mode; in rich mode the variable is
-# left UNSET so `eza $_dotfiles_eza_icons ...` expands to zero arguments (an
-# empty string would pass a spurious empty argument to eza).
+# eza icons flag: "--icons=always" in rich mode, "--icons=never" in plain
+# mode. Always set to one of the two so the eza functions (*.fish) explicitly
+# enable or disable icons.
 if test "$__dotfiles_use_plain" -eq 1
     set -g _dotfiles_eza_icons '--icons=never'
     set -gx STARSHIP_CONFIG "$__dotfiles_plain_cfg"
 else
-    set -eg _dotfiles_eza_icons
+    set -g _dotfiles_eza_icons '--icons=always'
     set -eg STARSHIP_CONFIG
 end
 
@@ -84,7 +84,7 @@ end
 
 function dotfiles-rich
     set -eg DOTFILES_PLAIN
-    set -eg _dotfiles_eza_icons
+    set -g _dotfiles_eza_icons '--icons=always'
     set -eg STARSHIP_CONFIG
     command -q starship; and starship init fish | source
 end

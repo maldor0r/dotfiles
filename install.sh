@@ -601,6 +601,12 @@ install_nerd_font() {
 }
 
 # ----------------------------------------------------------
+# Nerd Font state (shell-independent initialisation)
+# ----------------------------------------------------------
+
+NERD_FOUND=false
+
+# ----------------------------------------------------------
 # Configure lsd icons  (Bash only)
 # ----------------------------------------------------------
 
@@ -700,6 +706,42 @@ if [ "$DOTFILES_SHELL" = "bash" ] && command -v lsd &> /dev/null; then
             ;;
     esac
     echo
+fi
+
+# ----------------------------------------------------------
+# Nerd Font (shell-independent)
+# ----------------------------------------------------------
+
+# Detect whether a Nerd Font is already available. This is shell-independent
+# so a Fish-only (or any non-Bash) installation still installs the font.
+if ! $NERD_FOUND; then
+    if command -v fc-list &> /dev/null; then
+        fc-list : family 2>/dev/null | grep -qiE "nerd| nf" && NERD_FOUND=true
+    fi
+    if ! $NERD_FOUND; then
+        find "$HOME/.fonts" "$HOME/.local/share/fonts" /usr/share/fonts /usr/local/share/fonts \
+            -maxdepth 3 \( -iname "*nerd*" -o -iname "* nf*" -o -iname "*-nf*" \) 2>/dev/null | grep -q . && NERD_FOUND=true
+    fi
+    if ! $NERD_FOUND && [ "$IS_TERMUX" = "1" ] && [ -f "$HOME/.termux/font.ttf" ]; then
+        NERD_FOUND=true
+    fi
+    if ! $NERD_FOUND && [ "$IS_WSL" = "1" ]; then
+        # Windows user-installed fonts (per-user registration; all-users fonts
+        # live elsewhere). Matches by file name on the Windows side.
+        if find /mnt/c/Users/*/AppData/Local/Microsoft/Windows/Fonts -maxdepth 1 \
+            \( -iname "*nerd*" -o -iname "* nf*" -o -iname "*-nf*" \) 2>/dev/null | grep -q .; then
+            NERD_FOUND=true
+        fi
+    fi
+fi
+
+# Install the Nerd Font for the current user unless already present (or opted
+# out). Non-WSL/non-Termux desktop installs go to ~/.local/share/fonts.
+# --with-nerd-font forces the install even if detection missed something.
+if [ "$WITH_NERD_FONT" = "1" ] || { [ "$IS_WSL" != "1" ] && ! $NERD_FOUND; }; then
+    if { [ "$IS_TERMUX" = "1" ] && [ ! -f "$HOME/.termux/font.ttf" ]; } || [ "$IS_TERMUX" != "1" ]; then
+        install_nerd_font
+    fi
 fi
 
 # ----------------------------------------------------------
