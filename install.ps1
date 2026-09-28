@@ -292,22 +292,22 @@ function llta { lsd -la --tree --depth 3 @Args }
     Write-Warning "lsd not installed - keeping the default ls. Re-run after installing lsd."
 }
 
-# Only add the fastfetch auto-start when fastfetch is actually available, and
-# only for real console hosts, so it never runs inside ISE, remoting, or a
-# redirected subshell.
-$fastfetchBlock = ""
-if (Get-Command fastfetch -ErrorAction SilentlyContinue) {
-    # Single-quoted here-string: verbatim, so $Host.Name / $Host.UI.RawUI are
-    # resolved when the PROFILE loads, not when this installer runs (a
-    # double-quoted here-string would expand them here, corrupting the block).
-    $fastfetchBlock = @'
+# The fastfetch hook is ALWAYS written into the profile, decoupled from
+# whether fastfetch was just installed or was already present (someone may
+# have fastfetch from an older installer that never wrote the hook). The
+# block itself is runtime-guarded, so it only fires when fastfetch actually
+# exists at profile load - harmless if absent, no double-firing ever.
+#
+# Single-quoted here-string: verbatim, so $Host.Name / $Host.UI.RawUI are
+# resolved when the PROFILE loads, not when this installer runs (a
+# double-quoted here-string would expand them here, corrupting the block).
+$fastfetchBlock = @'
 
 # fastfetch (system info on interactive console shells only)
 if ($Host.UI.RawUI -and $Host.Name -notmatch 'ISE' -and (Get-Command fastfetch -ErrorAction SilentlyContinue)) {
     fastfetch
 }
 '@
-}
 
 Write-Host "[INFO] Setting up PowerShell profile..."
 
@@ -354,6 +354,19 @@ if (Test-Path $PROFILE) {
         $managedReplaced = $true
     } elseif ($existing -match "starship init") {
         Write-Host "[OK] Profile is already configured (legacy)."
+        # A legacy profile (bare "starship init", no managed markers) may predate
+        # the fastfetch hook. Retrofit it now, idempotently - the fastfetch block
+        # is runtime-guarded, and we never touch/duplicate the existing starship
+        # line or a fastfetch hook that is already present.
+        if ($existing -notmatch "fastfetch") {
+            $ts = Get-Date -Format "yyyyMMdd-HHmm"
+            Copy-Item $PROFILE "$PROFILE.$ts.bak"
+            Write-Host "[OK] Backup created: $PROFILE.$ts.bak"
+            Add-Content -Path $PROFILE -Value $fastfetchBlock
+            Write-Host "[OK] fastfetch hook retrofitted into profile."
+        } else {
+            Write-Host "[OK] fastfetch hook already present."
+        }
         $managedReplaced = $true
     }
 }
