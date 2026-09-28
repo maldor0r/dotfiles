@@ -142,3 +142,15 @@ dotfiles-rich() {
     command -v starship &> /dev/null || return 0
     eval "$(starship init bash)"
 }
+
+# ----------------------------------------------------------
+# fastfetch (system info on interactive shells only)
+#   Runs exactly once per interactive, real-TTY shell. Guarded so it
+#   never fires from non-interactive contexts (scripts, command
+#   substitution, pipes, CI) - those set $- without the interactive
+#   flag, and stdout is not a TTY in redirected subshells.
+# ----------------------------------------------------------
+
+if [[ $- == *i* ]] && [ -t 1 ] && command -v fastfetch &> /dev/null; then
+    fastfetch
+fi

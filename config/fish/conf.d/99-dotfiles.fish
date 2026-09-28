@@ -72,6 +72,19 @@ if command -q starship
 end
 
 # ----------------------------------------------------------
+# fastfetch (system info on interactive shells only)
+#   `status is-interactive` is fish's built-in interactive-shell
+#   guard (fish always sources conf.d even in non-interactive and
+#   login contexts); combined with `isatty stdout` it avoids
+#   running inside pipes/subshells where the output would be
+#   captured or discarded.
+# ----------------------------------------------------------
+
+if status is-interactive; and isatty stdout; and command -q fastfetch
+    fastfetch
+end
+
+# ----------------------------------------------------------
 # Toggles (current session only, take effect on next prompt)
 # ----------------------------------------------------------
 

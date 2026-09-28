@@ -498,6 +498,63 @@ if ! command -v starship &> /dev/null; then
 fi
 
 # ----------------------------------------------------------
+# fastfetch
+# ----------------------------------------------------------
+
+if ! command -v fastfetch &> /dev/null; then
+    echo "[INFO] Installing fastfetch..."
+    # Native-first: install from the system package manager when available
+    # (apt/dnf/pacman/... or pkg on Termux), consent-gated like the other
+    # tools. Return code is ignored; the fallback below handles systems
+    # whose package manager doesn't ship fastfetch.
+    ensure_tool fastfetch fastfetch || true
+    if [ "$IS_TERMUX" = "1" ]; then
+        if ! command -v fastfetch &> /dev/null; then
+            echo "[WARN] pkg does not offer fastfetch - cannot install automatically."
+            echo "       Install it manually from: https://github.com/fastfetch-cli/fastfetch"
+        fi
+    elif ! command -v fastfetch &> /dev/null && command -v curl &> /dev/null; then
+        echo "[INFO] fastfetch not in the package manager; downloading the GitHub release..."
+        FF_API_JSON=$(curl -fsSL https://api.github.com/repos/fastfetch-cli/fastfetch/releases/latest 2>/dev/null || true)
+        if command -v jq &> /dev/null; then
+            FF_VERSION=$(printf '%s' "$FF_API_JSON" | jq -r '.tag_name // empty' 2>/dev/null)
+        else
+            FF_VERSION=$(printf '%s' "$FF_API_JSON" | grep '"tag_name"' | cut -d'"' -f4)
+        fi
+        # Map the machine's CPU architecture to fastfetch's release assets.
+        case "$(uname -m)" in
+            x86_64|amd64)        FF_ARCH="amd64" ;;
+            aarch64|arm64)       FF_ARCH="aarch64" ;;
+            armv7*|armv6*|arm)   FF_ARCH="armv7l" ;;
+            i686|i386|x86)       FF_ARCH="i686" ;;
+            *)                   FF_ARCH="" ;;
+        esac
+        if [ -n "$FF_VERSION" ] && [ -n "$FF_ARCH" ]; then
+            FF_URL="https://github.com/fastfetch-cli/fastfetch/releases/download/${FF_VERSION}/fastfetch-linux-${FF_ARCH}.tar.gz"
+            echo "[INFO] Downloading fastfetch ${FF_VERSION} (${FF_ARCH})..."
+            if curl -sL "$FF_URL" -o /tmp/fastfetch.tar.gz && \
+               tar xzf /tmp/fastfetch.tar.gz -C /tmp && \
+               install -m 755 "/tmp/fastfetch-linux-${FF_ARCH}/usr/bin/fastfetch" "$LOCAL_BIN/fastfetch" && \
+               rm -rf /tmp/fastfetch.tar.gz "/tmp/fastfetch-linux-${FF_ARCH}"; then
+                echo "[OK] fastfetch installed to $LOCAL_BIN."
+            else
+                echo "[WARN] Could not install fastfetch automatically (download failed)."
+                rm -f /tmp/fastfetch.tar.gz
+            fi
+        elif [ -z "$FF_ARCH" ]; then
+            echo "[WARN] Unsupported architecture '$(uname -m)' - cannot download fastfetch."
+            echo "       Install it manually from: https://github.com/fastfetch-cli/fastfetch"
+        else
+            echo "[WARN] Could not determine the latest fastfetch version."
+        fi
+    fi
+    if ! command -v fastfetch &> /dev/null; then
+        echo "[WARN] Could not install fastfetch. Install it manually from:"
+        echo "       https://github.com/fastfetch-cli/fastfetch"
+    fi
+fi
+
+# ----------------------------------------------------------
 # Nerd Font (optional, opt-in)
 # ----------------------------------------------------------
 
@@ -760,6 +817,25 @@ if command -v starship &> /dev/null; then
 fi
 
 # ----------------------------------------------------------
+# fastfetch config
+# ----------------------------------------------------------
+
+if command -v fastfetch &> /dev/null; then
+    echo "[INFO] Configuring fastfetch..."
+    mkdir -p "$HOME/.config/fastfetch"
+    # Do not overwrite an existing user config.jsonc - fastfetch is fully
+    # user-configurable and the whole point of a personal config is that it
+    # may have been hand-tuned since install. Only write ours if none exists.
+    if [ ! -e "$HOME/.config/fastfetch/config.jsonc" ]; then
+        cp "$DOTFILES_DIR/config/fastfetch/config.jsonc" "$HOME/.config/fastfetch/config.jsonc"
+        echo "[OK] fastfetch configuration applied."
+    else
+        echo "[OK] fastfetch config already present - kept existing config.jsonc."
+    fi
+    echo
+fi
+
+# ----------------------------------------------------------
 # Fish shell  (Fish only)
 # ----------------------------------------------------------
 
@@ -966,6 +1042,9 @@ elif [ "$DOTFILES_SHELL" = "bash" ] && { [ "$SKIP_BLESH" = "1" ] || [ "$BLESH_SK
 fi
 if command -v starship &> /dev/null; then
     echo "  ✅ starship ready with pastel-powerline preset"
+fi
+if command -v fastfetch &> /dev/null; then
+    echo "  ✅ fastfetch ready (system info on interactive shells)"
 fi
 if [ "$DOTFILES_SHELL" = "fish" ] && command -v fish &> /dev/null; then
     echo "  ✅ fish ready (eza aliases + starship)"

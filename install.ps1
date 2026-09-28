@@ -75,6 +75,42 @@ if (-not (Get-Command lsd -ErrorAction SilentlyContinue)) {
 }
 
 # ----------------------------------------------------------
+# fastfetch
+# ----------------------------------------------------------
+
+if (-not (Get-Command fastfetch -ErrorAction SilentlyContinue)) {
+    Write-Host "[INFO] Installing fastfetch..."
+    if (Get-Command winget -ErrorAction SilentlyContinue) {
+        winget install --id Fastfetch-cli.Fastfetch --source winget --accept-source-agreements --accept-package-agreements --silent 2>$null
+        Refresh-EnvPath
+    } else {
+        Write-Warning "winget not found. Install fastfetch manually (https://github.com/fastfetch-cli/fastfetch) and re-run."
+    }
+    if (Get-Command fastfetch -ErrorAction SilentlyContinue) {
+        Write-Host "[OK] fastfetch installed."
+    } else {
+        Write-Warning "Could not install fastfetch. Install it manually: winget install Fastfetch-cli.Fastfetch"
+    }
+}
+
+# ----------------------------------------------------------
+# fastfetch config (do not clobber an existing user config)
+# ----------------------------------------------------------
+
+if (Get-Command fastfetch -ErrorAction SilentlyContinue) {
+    $ffConfigDir = Join-Path $env:USERPROFILE ".config\fastfetch"
+    New-Item -ItemType Directory -Force -Path $ffConfigDir | Out-Null
+    $ffConfigFile = Join-Path $ffConfigDir "config.jsonc"
+    if (-not (Test-Path $ffConfigFile)) {
+        Copy-Item (Join-Path $DOTFILES_DIR "config\fastfetch\config.jsonc") $ffConfigFile -Force
+        Write-Host "[OK] fastfetch configuration applied."
+    } else {
+        Write-Host "[OK] fastfetch config already present - kept existing config.jsonc."
+    }
+    Write-Host ""
+}
+
+# ----------------------------------------------------------
 # starship config
 # ----------------------------------------------------------
 
@@ -273,6 +309,20 @@ function llta { lsd -la --tree --depth 3 @Args }
     Write-Warning "lsd not installed - keeping the default ls. Re-run after installing lsd."
 }
 
+# Only add the fastfetch auto-start when fastfetch is actually available, and
+# only for real console hosts, so it never runs inside ISE, remoting, or a
+# redirected subshell.
+$fastfetchBlock = ""
+if (Get-Command fastfetch -ErrorAction SilentlyContinue) {
+    $fastfetchBlock = @"
+
+# fastfetch (system info on interactive console shells only)
+if ($Host.UI.RawUI -and $Host.Name -notmatch 'ISE') {
+    fastfetch
+}
+"@
+}
+
 Write-Host "[INFO] Setting up PowerShell profile..."
 
 # Build the profile content (managed block delimited by markers)
@@ -286,6 +336,7 @@ $marker
 
 $starshipBlock
 $lsdBlock
+$fastfetchBlock
 # PSReadLine: syntax highlighting and autocomplete (prediction needs PSReadLine 2.2+)
 try {
     Set-PSReadLineOption -PredictionSource History
@@ -343,5 +394,6 @@ Write-Host "========================================="
 Write-Host ""
 if (Get-Command starship -ErrorAction SilentlyContinue) { Write-Host "  OK starship ready" }
 if (Get-Command lsd -ErrorAction SilentlyContinue) { Write-Host "  OK lsd ready" }
+if (Get-Command fastfetch -ErrorAction SilentlyContinue) { Write-Host "  OK fastfetch ready" }
 Write-Host ""
 Write-Host "To apply the changes, open a new PowerShell window."

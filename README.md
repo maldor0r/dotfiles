@@ -12,6 +12,7 @@ and let me get my environment back up in minutes on any machine.
 - Bash: `lsd` aliases + `ble.sh` line editor
 - Fish: `eza` aliases + native line editing
 - **starship** prompt with pastel-powerline preset
+- **fastfetch** system-info banner on interactive shells
 - Rich/plain mode for Linux virtual TTYs (no Nerd Font needed)
 - Safe installation with automatic backups
 
@@ -133,9 +134,11 @@ Pre-configured templates are in `config/`:
 
 - `config/lsd/` — `config-fancy.yaml`, `config-unicode.yaml`, `config-no-icons.yaml`
 - `config/starship/starship.toml` — pastel-powerline preset
+- `config/fastfetch/config.jsonc` — pastel-powerline system-info banner
 
-Copy the desired template to `~/.config/lsd/config.yaml` or `~/.config/starship.toml`,
-or re-run the installer.
+Copy the desired template to `~/.config/lsd/config.yaml`, `~/.config/starship.toml`
+or `~/.config/fastfetch/config.jsonc`, or re-run the installer. Existing
+`fastfetch` configs are **not** overwritten — only written on first install.
 
 **Plain mode (Linux TTY):** On a raw virtual console (tty1/tty2/...) the Nerd
 Font isn't available, so powerline glyphs and file icons can't render. The shell
