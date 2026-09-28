@@ -297,13 +297,16 @@ function llta { lsd -la --tree --depth 3 @Args }
 # redirected subshell.
 $fastfetchBlock = ""
 if (Get-Command fastfetch -ErrorAction SilentlyContinue) {
-    $fastfetchBlock = @"
+    # Single-quoted here-string: verbatim, so $Host.Name / $Host.UI.RawUI are
+    # resolved when the PROFILE loads, not when this installer runs (a
+    # double-quoted here-string would expand them here, corrupting the block).
+    $fastfetchBlock = @'
 
 # fastfetch (system info on interactive console shells only)
-if ($Host.UI.RawUI -and $Host.Name -notmatch 'ISE') {
+if ($Host.UI.RawUI -and $Host.Name -notmatch 'ISE' -and (Get-Command fastfetch -ErrorAction SilentlyContinue)) {
     fastfetch
 }
-"@
+'@
 }
 
 Write-Host "[INFO] Setting up PowerShell profile..."
