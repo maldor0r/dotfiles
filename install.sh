@@ -817,25 +817,6 @@ if command -v starship &> /dev/null; then
 fi
 
 # ----------------------------------------------------------
-# fastfetch config
-# ----------------------------------------------------------
-
-if command -v fastfetch &> /dev/null; then
-    echo "[INFO] Configuring fastfetch..."
-    mkdir -p "$HOME/.config/fastfetch"
-    # Do not overwrite an existing user config.jsonc - fastfetch is fully
-    # user-configurable and the whole point of a personal config is that it
-    # may have been hand-tuned since install. Only write ours if none exists.
-    if [ ! -e "$HOME/.config/fastfetch/config.jsonc" ]; then
-        cp "$DOTFILES_DIR/config/fastfetch/config.jsonc" "$HOME/.config/fastfetch/config.jsonc"
-        echo "[OK] fastfetch configuration applied."
-    else
-        echo "[OK] fastfetch config already present - kept existing config.jsonc."
-    fi
-    echo
-fi
-
-# ----------------------------------------------------------
 # Fish shell  (Fish only)
 # ----------------------------------------------------------
 

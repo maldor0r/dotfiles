@@ -94,23 +94,6 @@ if (-not (Get-Command fastfetch -ErrorAction SilentlyContinue)) {
 }
 
 # ----------------------------------------------------------
-# fastfetch config (do not clobber an existing user config)
-# ----------------------------------------------------------
-
-if (Get-Command fastfetch -ErrorAction SilentlyContinue) {
-    $ffConfigDir = Join-Path $env:USERPROFILE ".config\fastfetch"
-    New-Item -ItemType Directory -Force -Path $ffConfigDir | Out-Null
-    $ffConfigFile = Join-Path $ffConfigDir "config.jsonc"
-    if (-not (Test-Path $ffConfigFile)) {
-        Copy-Item (Join-Path $DOTFILES_DIR "config\fastfetch\config.jsonc") $ffConfigFile -Force
-        Write-Host "[OK] fastfetch configuration applied."
-    } else {
-        Write-Host "[OK] fastfetch config already present - kept existing config.jsonc."
-    }
-    Write-Host ""
-}
-
-# ----------------------------------------------------------
 # starship config
 # ----------------------------------------------------------
 
